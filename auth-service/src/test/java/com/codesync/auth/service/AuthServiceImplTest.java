@@ -1,195 +1,196 @@
 package com.codesync.auth.service;
 
-import com.codesync.auth.dto.UpdateProfileRequest;
 import com.codesync.auth.entity.User;
 import com.codesync.auth.exception.AuthException;
 import com.codesync.auth.repository.UserRepository;
 import com.codesync.auth.security.JwtUtil;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Arrays;
-import java.util.List;
 import java.util.Optional;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
 class AuthServiceImplTest {
 
-    @Mock
-    private UserRepository userRepository;
+	@Mock
+	private UserRepository repo;
 
-    @Mock
-    private JwtUtil jwtUtil;
+	@Mock
+	private JwtUtil jwtUtil;
 
-    @InjectMocks
-    private AuthServiceImpl authService;
+	@InjectMocks
+	private AuthServiceImpl authService;
 
-    private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+	private User user;
 
-    private User testUser;
+	@BeforeEach
+	void setUp() {
+		user = new User();
+		user.setUserId(1);
+		user.setUsername("testuser");
+		user.setEmail("test@example.com");
+		user.setPasswordHash("password");
+		user.setActive(true);
+	}
 
-    @BeforeEach
-    void setUp() {
-        MockitoAnnotations.openMocks(this);
-        testUser = new User();
-        testUser.setUserId(1);
-        testUser.setUsername("testuser");
-        testUser.setEmail("test@example.com");
-        testUser.setPasswordHash(encoder.encode("password123"));
-        testUser.setFullName("Test User");
-        testUser.setRole("DEVELOPER");
-        testUser.setActive(true);
-    }
+	// =========================
+	// ✅ REGISTER
+	// =========================
+	@Test
+	void register_Success() {
+		when(repo.existsByEmail(user.getEmail())).thenReturn(false);
+		when(repo.existsByUsername(user.getUsername())).thenReturn(false);
+		when(repo.save(any(User.class))).thenReturn(user);
 
-    @Test
-    void register_ShouldSaveUser() {
-        when(userRepository.existsByEmail("test@example.com")).thenReturn(false);
-        when(userRepository.existsByUsername("testuser")).thenReturn(false);
-        when(userRepository.save(any(User.class))).thenReturn(testUser);
+		User result = authService.register(user);
 
-        User result = authService.register(testUser);
+		assertNotNull(result);
+		assertEquals("test@example.com", result.getEmail());
+		verify(repo).save(any(User.class));
+	}
 
-        assertNotNull(result);
-        assertEquals("testuser", result.getUsername());
-        verify(userRepository).save(any(User.class));
-    }
+	@Test
+	void register_EmailExists() {
+		when(repo.existsByEmail(user.getEmail())).thenReturn(true);
 
-    @Test
-    void register_ShouldThrowException_WhenEmailExists() {
-        when(userRepository.existsByEmail("test@example.com")).thenReturn(true);
+		assertThrows(AuthException.class, () -> authService.register(user));
+	}
 
-        assertThrows(AuthException.class, () -> authService.register(testUser));
-    }
+	@Test
+	void register_UsernameExists() {
+		when(repo.existsByEmail(user.getEmail())).thenReturn(false);
+		when(repo.existsByUsername(user.getUsername())).thenReturn(true);
 
-    @Test
-    void login_ShouldReturnToken_WhenValidCredentials() {
-        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
-        when(jwtUtil.generateToken("test@example.com")).thenReturn("jwt.token");
+		assertThrows(AuthException.class, () -> authService.register(user));
+	}
 
-        String token = authService.login("test@example.com", "password123");
+	
+	@Test
+	void login_Success() {
+		// encoded password
+		user.setPasswordHash(new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder().encode("password"));
 
-        assertEquals("jwt.token", token);
-    }
+		when(repo.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
+		when(jwtUtil.generateToken(user.getEmail())).thenReturn("token");
 
-    @Test
-    void login_ShouldThrowException_WhenUserNotFound() {
-        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.empty());
+		String token = authService.login(user.getEmail(), "password");
 
-        assertThrows(AuthException.class, () -> authService.login("test@example.com", "password123"));
-    }
+		assertEquals("token", token);
+	}
 
-    @Test
-    void login_ShouldThrowException_WhenInvalidPassword() {
-        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
+	@Test
+	void login_UserNotFound() {
+		when(repo.findByEmail(user.getEmail())).thenReturn(Optional.empty());
 
-        assertThrows(AuthException.class, () -> authService.login("test@example.com", "wrongpass"));
-    }
+		assertThrows(AuthException.class, () -> authService.login(user.getEmail(), "password"));
+	}
 
-    @Test
-    void login_ShouldThrowException_WhenAccountDeactivated() {
-        testUser.setActive(false);
-        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
+	@Test
+	void login_InvalidPassword() {
+		user.setPasswordHash(new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder().encode("correct"));
 
-        assertThrows(AuthException.class, () -> authService.login("test@example.com", "password123"));
-    }
+		when(repo.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
 
-    @Test
-    void updateProfile_ShouldUpdateUser() {
-        UpdateProfileRequest request = new UpdateProfileRequest();
-        request.setFullName("New Name");
+		assertThrows(AuthException.class, () -> authService.login(user.getEmail(), "wrong"));
+	}
 
-        when(userRepository.findByUserId(1)).thenReturn(testUser);
-        when(userRepository.save(any(User.class))).thenReturn(testUser);
+	
+	@Test
+	void validateToken() {
+		when(jwtUtil.validateToken("token")).thenReturn(true);
 
-        User result = authService.updateProfile(1, request, "test@example.com");
+		assertTrue(authService.validateToken("token"));
+	}
 
-        assertEquals("New Name", result.getFullName());
-    }
+	@Test
+	void refreshToken() {
+		when(jwtUtil.extractEmail("oldToken")).thenReturn("test@example.com");
+		when(jwtUtil.generateToken("test@example.com")).thenReturn("newToken");
 
-    @Test
-    void updateProfile_ShouldThrowException_WhenUnauthorized() {
-        when(userRepository.findByUserId(1)).thenReturn(testUser);
+		String token = authService.refreshToken("oldToken");
 
-        assertThrows(AuthException.class, () -> authService.updateProfile(1, new UpdateProfileRequest(), "other@example.com"));
-    }
+		assertEquals("newToken", token);
+	}
 
-    @Test
-    void changePassword_ShouldUpdatePassword() {
-        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
 
-        authService.changePassword("test@example.com", "password123", "newpass123");
+	@Test
+	void getUserByEmail() {
+		when(repo.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
 
-        verify(userRepository).save(any(User.class));
-    }
+		User result = authService.getUserByEmail(user.getEmail());
 
-    @Test
-    void changePassword_ShouldThrowException_WhenWrongCurrentPassword() {
-        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
+		assertEquals(user.getEmail(), result.getEmail());
+	}
 
-        assertThrows(AuthException.class, () -> authService.changePassword("test@example.com", "wrongpass", "newpass"));
-    }
+	@Test
+	void getUserById() {
+		when(repo.findByUserId(1)).thenReturn(user);
 
-    @Test
-    void searchUsers_ShouldReturnUsers() {
-        List<User> users = Arrays.asList(testUser);
-        when(userRepository.findByUsernameContainingIgnoreCaseOrEmailContainingIgnoreCase("test", "test")).thenReturn(users);
+		User result = authService.getUserById(1);
 
-        List<User> result = authService.searchUsers("test");
+		assertEquals(1, result.getUserId());
+	}
 
-        assertEquals(1, result.size());
-    }
 
-    @Test
-    void searchUsers_ShouldReturnAllUsers_WhenQueryBlank() {
-        List<User> users = Arrays.asList(testUser);
-        when(userRepository.findAll()).thenReturn(users);
+	@Test
+	void updateProfile() {
+		when(repo.findByUserId(1)).thenReturn(user);
+		when(repo.save(any(User.class))).thenReturn(user);
 
-        List<User> result = authService.searchUsers("");
+		User updated = new User();
+		updated.setFullName("Deepak");
+		updated.setAvatarUrl("img.png");
+		updated.setBio("Developer");
 
-        assertEquals(1, result.size());
-    }
+		User result = authService.updateProfile(1, updated);
 
-    @Test
-    void refreshToken_ShouldReturnNewToken() {
-        when(jwtUtil.extractEmail("old.token")).thenReturn("test@example.com");
-        when(jwtUtil.generateToken("test@example.com")).thenReturn("new.token");
+		assertEquals("Deepak", result.getFullName());
+	}
 
-        String result = authService.refreshToken("old.token");
 
-        assertEquals("new.token", result);
-    }
+	@Test
+	void changePassword() {
+		when(repo.findByUserId(1)).thenReturn(user);
 
-    @Test
-    void deactivateAccount_ShouldDeactivateUser() {
-        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
+		authService.changePassword(1, "newpass");
 
-        User result = authService.deactivateAccount("test@example.com");
+		assertNotEquals("newpass", user.getPasswordHash()); // encoded
+		verify(repo).save(user);
+	}
 
-        assertFalse(result.isActive());
-    }
 
-    @Test
-    void getUserById_ShouldReturnUser() {
-        when(userRepository.findByUserId(1)).thenReturn(testUser);
+	@Test
+	void searchUsers() {
+		when(repo.findByUsernameContaining("test")).thenReturn(List.of(user));
 
-        User result = authService.getUserById(1);
+		List<User> result = authService.searchUsers("test");
 
-        assertEquals("testuser", result.getUsername());
-    }
+		assertFalse(result.isEmpty());
+	}
 
-    @Test
-    void getUserByEmail_ShouldReturnUser() {
-        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
+	@Test
+	void searchUsers_Blank() {
+		assertThrows(AuthException.class, () -> authService.searchUsers(""));
+	}
 
-        User result = authService.getUserByEmail("test@example.com");
 
-        assertNotNull(result);
-    }
+	@Test
+	void deactivateAccount() {
+		when(repo.findByUserId(1)).thenReturn(user);
+
+		authService.deactivateAccount(1);
+
+		assertFalse(user.isActive());
+		verify(repo).save(user);
+	}
 }
