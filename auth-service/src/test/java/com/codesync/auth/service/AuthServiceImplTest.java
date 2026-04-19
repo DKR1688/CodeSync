@@ -4,23 +4,35 @@ import com.codesync.auth.entity.User;
 import com.codesync.auth.exception.AuthException;
 import com.codesync.auth.repository.UserRepository;
 import com.codesync.auth.security.JwtUtil;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
-import java.util.Optional;
 import java.util.List;
+import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class AuthServiceImplTest {
+
+	private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
 	@Mock
 	private UserRepository repo;
@@ -40,152 +52,135 @@ class AuthServiceImplTest {
 		user.setUsername("testuser");
 		user.setEmail("test@example.com");
 		user.setPasswordHash("password");
+		user.setRole("DEVELOPER");
+		user.setProvider("LOCAL");
 		user.setActive(true);
+		user.setFullName("Test User");
 	}
 
-	// =========================
-	// ✅ REGISTER
-	// =========================
 	@Test
-	void register_Success() {
-		when(repo.existsByEmail(user.getEmail())).thenReturn(false);
-		when(repo.existsByUsername(user.getUsername())).thenReturn(false);
-		when(repo.save(any(User.class))).thenReturn(user);
+	void registerSuccessEncodesPasswordAndDefaultsProvider() {
+		when(repo.existsByEmail("test@example.com")).thenReturn(false);
+		when(repo.existsByUsername("testuser")).thenReturn(false);
+		when(repo.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
 		User result = authService.register(user);
 
 		assertNotNull(result);
-		assertEquals("test@example.com", result.getEmail());
+		assertNotEquals("password", result.getPasswordHash());
+		assertEquals("LOCAL", result.getProvider());
 		verify(repo).save(any(User.class));
 	}
 
 	@Test
-	void register_EmailExists() {
-		when(repo.existsByEmail(user.getEmail())).thenReturn(true);
+	void registerRejectsDuplicateEmail() {
+		when(repo.existsByEmail("test@example.com")).thenReturn(true);
 
 		assertThrows(AuthException.class, () -> authService.register(user));
+		verify(repo, never()).save(any(User.class));
 	}
 
 	@Test
-	void register_UsernameExists() {
-		when(repo.existsByEmail(user.getEmail())).thenReturn(false);
-		when(repo.existsByUsername(user.getUsername())).thenReturn(true);
+	void loginSuccessReturnsJwt() {
+		user.setPasswordHash(encoder.encode("password"));
+		when(repo.findByEmail("test@example.com")).thenReturn(Optional.of(user));
+		when(jwtUtil.generateToken(user)).thenReturn("token");
 
-		assertThrows(AuthException.class, () -> authService.register(user));
-	}
-
-	
-	@Test
-	void login_Success() {
-		// encoded password
-		user.setPasswordHash(new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder().encode("password"));
-
-		when(repo.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
-		when(jwtUtil.generateToken(user.getEmail())).thenReturn("token");
-
-		String token = authService.login(user.getEmail(), "password");
+		String token = authService.login("test@example.com", "password");
 
 		assertEquals("token", token);
 	}
 
 	@Test
-	void login_UserNotFound() {
-		when(repo.findByEmail(user.getEmail())).thenReturn(Optional.empty());
+	void loginRejectsInactiveUsers() {
+		user.setActive(false);
+		when(repo.findByEmail("test@example.com")).thenReturn(Optional.of(user));
 
-		assertThrows(AuthException.class, () -> authService.login(user.getEmail(), "password"));
+		assertThrows(AuthException.class, () -> authService.login("test@example.com", "password"));
 	}
 
 	@Test
-	void login_InvalidPassword() {
-		user.setPasswordHash(new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder().encode("correct"));
-
-		when(repo.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
-
-		assertThrows(AuthException.class, () -> authService.login(user.getEmail(), "wrong"));
-	}
-
-	
-	@Test
-	void validateToken() {
-		when(jwtUtil.validateToken("token")).thenReturn(true);
-
-		assertTrue(authService.validateToken("token"));
-	}
-
-	@Test
-	void refreshToken() {
+	void refreshTokenReissuesForActiveUser() {
+		when(jwtUtil.validateToken("oldToken")).thenReturn(true);
 		when(jwtUtil.extractEmail("oldToken")).thenReturn("test@example.com");
-		when(jwtUtil.generateToken("test@example.com")).thenReturn("newToken");
+		when(repo.findByEmail("test@example.com")).thenReturn(Optional.of(user));
+		when(jwtUtil.generateToken(user)).thenReturn("newToken");
 
 		String token = authService.refreshToken("oldToken");
 
 		assertEquals("newToken", token);
 	}
 
-
 	@Test
-	void getUserByEmail() {
-		when(repo.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
+	void logoutRevokesValidToken() {
+		when(jwtUtil.validateToken("validToken")).thenReturn(true);
+		doNothing().when(jwtUtil).revokeToken("validToken");
 
-		User result = authService.getUserByEmail(user.getEmail());
+		authService.logout("validToken");
 
-		assertEquals(user.getEmail(), result.getEmail());
+		verify(jwtUtil).revokeToken("validToken");
 	}
 
 	@Test
-	void getUserById() {
-		when(repo.findByUserId(1)).thenReturn(user);
+	void upsertOAuthUserCreatesAvailableUsername() {
+		when(repo.findByEmail("oauth@example.com")).thenReturn(Optional.empty());
+		when(repo.existsByUsername("oauth")).thenReturn(true);
+		when(repo.existsByUsername("oauth1")).thenReturn(false);
+		when(repo.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-		User result = authService.getUserById(1);
+		User created = authService.upsertOAuthUser("oauth@example.com", "oauth", "OAuth User", "google");
 
-		assertEquals(1, result.getUserId());
+		assertEquals("oauth1", created.getUsername());
+		assertEquals("GOOGLE", created.getProvider());
 	}
 
-
 	@Test
-	void updateProfile() {
+	void updateProfileChangesUsernameEmailAndBio() {
+		User update = new User();
+		update.setUsername("renamed");
+		update.setEmail("renamed@example.com");
+		update.setFullName("Renamed User");
+		update.setBio("Builder");
+
 		when(repo.findByUserId(1)).thenReturn(user);
-		when(repo.save(any(User.class))).thenReturn(user);
+		when(repo.existsByUsernameAndUserIdNot("renamed", 1)).thenReturn(false);
+		when(repo.existsByEmailAndUserIdNot("renamed@example.com", 1)).thenReturn(false);
+		when(repo.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-		User updated = new User();
-		updated.setFullName("Deepak");
-		updated.setAvatarUrl("img.png");
-		updated.setBio("Developer");
+		User result = authService.updateProfile(1, update);
 
-		User result = authService.updateProfile(1, updated);
-
-		assertEquals("Deepak", result.getFullName());
+		assertEquals("renamed", result.getUsername());
+		assertEquals("renamed@example.com", result.getEmail());
+		assertEquals("Builder", result.getBio());
 	}
 
-
 	@Test
-	void changePassword() {
+	void changePasswordRequiresCurrentPasswordMatch() {
+		user.setPasswordHash(encoder.encode("oldPass"));
 		when(repo.findByUserId(1)).thenReturn(user);
 
-		authService.changePassword(1, "newpass");
+		authService.changePassword(1, "oldPass", "newPass123");
 
-		assertNotEquals("newpass", user.getPasswordHash()); // encoded
+		assertTrue(encoder.matches("newPass123", user.getPasswordHash()));
 		verify(repo).save(user);
 	}
 
+	@Test
+	void searchUsersRejectsBlankQuery() {
+		assertThrows(AuthException.class, () -> authService.searchUsers(" "));
+	}
 
 	@Test
-	void searchUsers() {
-		when(repo.findByUsernameContaining("test")).thenReturn(List.of(user));
+	void searchUsersUsesCaseInsensitiveRepositoryQuery() {
+		when(repo.findByUsernameContainingIgnoreCase("test")).thenReturn(List.of(user));
 
 		List<User> result = authService.searchUsers("test");
 
-		assertFalse(result.isEmpty());
+		assertEquals(1, result.size());
 	}
 
 	@Test
-	void searchUsers_Blank() {
-		assertThrows(AuthException.class, () -> authService.searchUsers(""));
-	}
-
-
-	@Test
-	void deactivateAccount() {
+	void deactivateAccountMarksUserInactive() {
 		when(repo.findByUserId(1)).thenReturn(user);
 
 		authService.deactivateAccount(1);

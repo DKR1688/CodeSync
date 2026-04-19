@@ -8,6 +8,10 @@ public interface AuthService {
 
 	User register(User user);
 
+	User upsertOAuthUser(String email, String username, String fullName, String provider);
+
+	String issueToken(User user);
+
 	String login(String email, String password);
 
 	void logout(String token);
@@ -22,7 +26,7 @@ public interface AuthService {
 
 	User updateProfile(int id, User user);
 
-	void changePassword(int id, String password);
+	void changePassword(int id, String currentPassword, String newPassword);
 
 	List<User> searchUsers(String username);
 
