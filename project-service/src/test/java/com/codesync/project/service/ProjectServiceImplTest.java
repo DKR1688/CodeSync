@@ -180,6 +180,24 @@ class ProjectServiceImplTest {
 	}
 
 	@Test
+	void addMemberPersistsUpdatedMemberSet() {
+		when(repository.findById(1L)).thenReturn(Optional.of(project));
+
+		service.addMember(1L, 99L);
+
+		assertTrue(project.getMemberUserIds().contains(99L));
+		verify(repository).save(project);
+	}
+
+	@Test
+	void removeMemberRejectsOwnerRemoval() {
+		when(repository.findById(1L)).thenReturn(Optional.of(project));
+
+		assertThrows(InvalidProjectRequestException.class, () -> service.removeMember(1L, 10L));
+		verify(repository, never()).save(any(Project.class));
+	}
+
+	@Test
 	void forkProjectRejectsArchivedSourceProject() {
 		project.setArchived(true);
 		when(repository.findById(1L)).thenReturn(Optional.of(project));

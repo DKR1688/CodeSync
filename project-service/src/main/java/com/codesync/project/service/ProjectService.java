@@ -3,6 +3,7 @@ package com.codesync.project.service;
 import com.codesync.project.dto.ProjectDTO;
 
 import java.util.List;
+import java.util.Set;
 
 public interface ProjectService {
 
@@ -16,7 +17,7 @@ public interface ProjectService {
 
 	List<ProjectDTO> searchProjects(String name);
 
-	List<ProjectDTO> getProjectsByMember(Long userId); // placeholder
+	List<ProjectDTO> getProjectsByMember(Long userId);
 
 	ProjectDTO updateProject(Long projectId, ProjectDTO project);
 
@@ -29,4 +30,10 @@ public interface ProjectService {
 	void starProject(Long projectId);
 
 	List<ProjectDTO> getProjectsByLanguage(String language);
+
+	void addMember(Long projectId, Long userId);
+
+	void removeMember(Long projectId, Long userId);
+
+	Set<Long> getProjectMembers(Long projectId);
 }

@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -39,6 +40,11 @@ public class GlobalExceptionHandler {
 			message = readable.getMostSpecificCause().getMessage();
 		}
 		return buildResponse(HttpStatus.BAD_REQUEST, message, request);
+	}
+
+	@ExceptionHandler(AccessDeniedException.class)
+	public ResponseEntity<ApiErrorResponse> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
+		return buildResponse(HttpStatus.FORBIDDEN, ex.getMessage(), request);
 	}
 
 	@ExceptionHandler(Exception.class)
