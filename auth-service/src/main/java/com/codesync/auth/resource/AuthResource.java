@@ -1,4 +1,4 @@
-package com.codesync.auth.controller;
+package com.codesync.auth.resource;
 
 import com.codesync.auth.dto.AuthResponse;
 import com.codesync.auth.dto.ChangePasswordRequest;
@@ -12,21 +12,31 @@ import com.codesync.auth.mapper.UserMapper;
 import com.codesync.auth.security.AuthenticatedUser;
 import com.codesync.auth.service.AuthService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-import java.util.stream.Collectors;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/auth")
 public class AuthResource {
 
-	@Autowired
-	private AuthService service;
+	private final AuthService service;
+
+	public AuthResource(AuthService service) {
+		this.service = service;
+	}
 
 	@PostMapping("/register")
 	public UserResponse register(@Valid @RequestBody RegisterRequest request) {
