@@ -23,6 +23,12 @@ public class GlobalExceptionHandler {
 		return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
 	}
 
+	@ExceptionHandler(DownstreamServiceException.class)
+	public ResponseEntity<ApiErrorResponse> handleDownstreamService(DownstreamServiceException ex,
+			HttpServletRequest request) {
+		return buildResponse(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage(), request);
+	}
+
 	@ExceptionHandler(MethodArgumentNotValidException.class)
 	public ResponseEntity<ApiErrorResponse> handleValidation(MethodArgumentNotValidException ex,
 			HttpServletRequest request) {

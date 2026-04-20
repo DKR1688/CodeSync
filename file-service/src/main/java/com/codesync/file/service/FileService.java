@@ -27,6 +27,8 @@ public interface FileService {
 
 	CodeFile createFolder(Long projectId, String folderPath, Long creatorId);
 
+	void copyProjectFiles(Long sourceProjectId, Long targetProjectId, Long actorUserId);
+
 	List<FileTreeNode> getFileTree(Long projectId);
 
 	List<CodeFile> searchInProject(Long projectId, String query);

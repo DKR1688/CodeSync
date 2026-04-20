@@ -12,6 +12,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -19,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
@@ -174,6 +176,36 @@ class FileServiceImplTest {
 
 		assertEquals(1, result.size());
 		assertEquals("docs/notes.txt", result.getFirst().getPath());
+	}
+
+	@Test
+	void copyProjectFilesDuplicatesActiveSourceFilesIntoEmptyTargetProject() {
+		CodeFile sourceFolder = createFolder(2L, 100L, "src");
+		CodeFile sourceFile = createFile(3L, 100L, "src/App.java", "Java");
+		sourceFile.setContent("class App {}");
+		sourceFile.setSize(12);
+		when(repository.findByProjectIdAndIsDeletedFalseOrderByPathAsc(200L)).thenReturn(List.of());
+		when(repository.findByProjectIdAndIsDeletedFalseOrderByPathAsc(100L)).thenReturn(List.of(sourceFolder, sourceFile));
+
+		service.copyProjectFiles(100L, 200L, 77L);
+
+		verify(repository).saveAll(argThat(files -> {
+			List<CodeFile> savedFiles = new ArrayList<>();
+			files.forEach(savedFiles::add);
+			return savedFiles.size() == 2
+					&& savedFiles.stream().allMatch(savedFile -> savedFile.getProjectId().equals(200L))
+					&& savedFiles.stream().allMatch(savedFile -> savedFile.getCreatedById().equals(77L))
+					&& savedFiles.stream().anyMatch(savedFile -> "src/App.java".equals(savedFile.getPath())
+							&& "class App {}".equals(savedFile.getContent()));
+		}));
+	}
+
+	@Test
+	void copyProjectFilesRejectsNonEmptyTargetProject() {
+		when(repository.findByProjectIdAndIsDeletedFalseOrderByPathAsc(200L)).thenReturn(List.of(createFile(9L, 200L, "App.java", "Java")));
+
+		assertThrows(InvalidFileRequestException.class, () -> service.copyProjectFiles(100L, 200L, 77L));
+		verify(repository, never()).saveAll(any());
 	}
 
 	private CodeFile createFile(Long fileId, Long projectId, String path, String language) {

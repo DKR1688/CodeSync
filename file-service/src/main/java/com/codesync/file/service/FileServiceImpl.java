@@ -153,6 +153,33 @@ public class FileServiceImpl implements FileService {
 	}
 
 	@Override
+	public void copyProjectFiles(Long sourceProjectId, Long targetProjectId, Long actorUserId) {
+		validatePositiveId(sourceProjectId, "Source project id");
+		validatePositiveId(targetProjectId, "Target project id");
+		validatePositiveId(actorUserId, "Actor user id");
+
+		if (sourceProjectId.equals(targetProjectId)) {
+			throw new InvalidFileRequestException("Source and target project ids must be different");
+		}
+
+		List<CodeFile> targetFiles = repository.findByProjectIdAndIsDeletedFalseOrderByPathAsc(targetProjectId);
+		if (!targetFiles.isEmpty()) {
+			throw new InvalidFileRequestException("Target project already contains files");
+		}
+
+		List<CodeFile> sourceFiles = repository.findByProjectIdAndIsDeletedFalseOrderByPathAsc(sourceProjectId);
+		if (sourceFiles.isEmpty()) {
+			return;
+		}
+
+		List<CodeFile> copiedFiles = sourceFiles.stream()
+				.map(sourceFile -> copyForProject(sourceFile, targetProjectId, actorUserId))
+				.toList();
+
+		repository.saveAll(copiedFiles);
+	}
+
+	@Override
 	@Transactional(readOnly = true)
 	public List<FileTreeNode> getFileTree(Long projectId) {
 		validatePositiveId(projectId, "Project id");
@@ -369,6 +396,20 @@ public class FileServiceImpl implements FileService {
 
 	private long computeSize(String content) {
 		return content.getBytes(StandardCharsets.UTF_8).length;
+	}
+
+	private CodeFile copyForProject(CodeFile sourceFile, Long targetProjectId, Long actorUserId) {
+		CodeFile copiedFile = new CodeFile();
+		copiedFile.setProjectId(targetProjectId);
+		copiedFile.setName(sourceFile.getName());
+		copiedFile.setPath(sourceFile.getPath());
+		copiedFile.setLanguage(sourceFile.getLanguage());
+		copiedFile.setContent(sourceFile.getContent());
+		copiedFile.setSize(sourceFile.getSize());
+		copiedFile.setCreatedById(actorUserId);
+		copiedFile.setLastEditedBy(actorUserId);
+		copiedFile.setDeleted(false);
+		return copiedFile;
 	}
 
 	private void validatePositiveId(Long value, String fieldName) {
