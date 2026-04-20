@@ -9,6 +9,7 @@ import com.codesync.project.repository.ProjectRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.data.domain.Sort;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -22,10 +23,12 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -83,11 +86,114 @@ class ProjectServiceImplTest {
 	}
 
 	@Test
+	void createProjectTrimsTextFieldsAndConvertsBlankOptionalFieldsToNull() {
+		projectDTO.setName("  Compiler Hub  ");
+		projectDTO.setDescription("   ");
+		projectDTO.setLanguage("  Java  ");
+		projectDTO.setMemberUserIds(null);
+		when(repository.save(any(Project.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+		ProjectDTO created = service.createProject(projectDTO);
+
+		assertEquals("Compiler Hub", created.getName());
+		assertNull(created.getDescription());
+		assertEquals("Java", created.getLanguage());
+		assertTrue(created.getMemberUserIds().isEmpty());
+	}
+
+	@Test
 	void createProjectRejectsMissingOwnerId() {
 		projectDTO.setOwnerId(null);
 
 		assertThrows(InvalidProjectRequestException.class, () -> service.createProject(projectDTO));
 		verify(repository, never()).save(any(Project.class));
+	}
+
+	@Test
+	void createProjectRejectsBlankName() {
+		projectDTO.setName("  ");
+
+		assertThrows(InvalidProjectRequestException.class, () -> service.createProject(projectDTO));
+		verify(repository, never()).save(any(Project.class));
+	}
+
+	@Test
+	void createProjectRejectsMissingVisibility() {
+		projectDTO.setVisibility(null);
+
+		assertThrows(InvalidProjectRequestException.class, () -> service.createProject(projectDTO));
+		verify(repository, never()).save(any(Project.class));
+	}
+
+	@Test
+	void createProjectRejectsInvalidTemplateId() {
+		projectDTO.setTemplateId(0L);
+
+		assertThrows(InvalidProjectRequestException.class, () -> service.createProject(projectDTO));
+		verify(repository, never()).save(any(Project.class));
+	}
+
+	@Test
+	void createProjectRejectsInvalidMemberIds() {
+		projectDTO.setMemberUserIds(Set.of(11L, 0L));
+
+		assertThrows(InvalidProjectRequestException.class, () -> service.createProject(projectDTO));
+		verify(repository, never()).save(any(Project.class));
+	}
+
+	@Test
+	void getProjectByIdReturnsProject() {
+		when(repository.findById(1L)).thenReturn(Optional.of(project));
+
+		ProjectDTO found = service.getProjectById(1L);
+
+		assertEquals(1L, found.getProjectId());
+		assertEquals(10L, found.getOwnerId());
+		assertEquals("Compiler", found.getName());
+		assertEquals(Set.of(11L, 12L), found.getMemberUserIds());
+	}
+
+	@Test
+	void getProjectsByOwnerUsesRepositoryQuery() {
+		when(repository.findByOwnerId(eq(10L), any(Sort.class))).thenReturn(List.of(project));
+
+		List<ProjectDTO> projects = service.getProjectsByOwner(10L);
+
+		assertEquals(1, projects.size());
+		assertEquals(10L, projects.getFirst().getOwnerId());
+	}
+
+	@Test
+	void getProjectsByOwnerRejectsInvalidOwnerId() {
+		assertThrows(InvalidProjectRequestException.class, () -> service.getProjectsByOwner(0L));
+		verify(repository, never()).findByOwnerId(anyLong(), any(Sort.class));
+	}
+
+	@Test
+	void getPublicProjectsUsesPublicDiscoveryQuery() {
+		when(repository.findByVisibilityAndIsArchivedFalse(eq(Visibility.PUBLIC), any(Sort.class))).thenReturn(List.of(project));
+
+		List<ProjectDTO> projects = service.getPublicProjects();
+
+		assertEquals(1, projects.size());
+		assertEquals(Visibility.PUBLIC, projects.getFirst().getVisibility());
+	}
+
+	@Test
+	void searchProjectsTrimsNameAndReturnsDiscoverableProjects() {
+		when(repository.searchDiscoverableByName("Compiler", Visibility.PUBLIC)).thenReturn(List.of(project));
+
+		List<ProjectDTO> projects = service.searchProjects("  Compiler  ");
+
+		assertEquals(1, projects.size());
+		assertEquals("Compiler", projects.getFirst().getName());
+		verify(repository).searchDiscoverableByName("Compiler", Visibility.PUBLIC);
+	}
+
+	@Test
+	void searchProjectsRejectsBlankName() {
+		assertThrows(InvalidProjectRequestException.class, () -> service.searchProjects("  "));
+		verify(repository, never()).searchDiscoverableByName(any(), any());
 	}
 
 	@Test
@@ -98,6 +204,38 @@ class ProjectServiceImplTest {
 
 		assertEquals(1, projects.size());
 		assertEquals("Compiler", projects.getFirst().getName());
+	}
+
+	@Test
+	void getProjectsByMemberRejectsInvalidUserId() {
+		assertThrows(InvalidProjectRequestException.class, () -> service.getProjectsByMember(-1L));
+		verify(repository, never()).findByMemberUserIdOrderByUpdatedAtDesc(anyLong());
+	}
+
+	@Test
+	void getProjectsByLanguageTrimsLanguageAndUsesPublicQuery() {
+		when(repository.findByLanguageIgnoreCaseAndVisibilityAndIsArchivedFalse(eq("Java"), eq(Visibility.PUBLIC),
+				any(Sort.class))).thenReturn(List.of(project));
+
+		List<ProjectDTO> projects = service.getProjectsByLanguage("  Java  ");
+
+		assertEquals(1, projects.size());
+		assertEquals("Java", projects.getFirst().getLanguage());
+	}
+
+	@Test
+	void getProjectsByLanguageRejectsBlankLanguage() {
+		assertThrows(InvalidProjectRequestException.class, () -> service.getProjectsByLanguage(" "));
+		verify(repository, never()).findByLanguageIgnoreCaseAndVisibilityAndIsArchivedFalse(any(), any(), any());
+	}
+
+	@Test
+	void getProjectMembersReturnsCurrentMemberSet() {
+		when(repository.findById(1L)).thenReturn(Optional.of(project));
+
+		Set<Long> members = service.getProjectMembers(1L);
+
+		assertEquals(Set.of(11L, 12L), members);
 	}
 
 	@Test
@@ -128,6 +266,15 @@ class ProjectServiceImplTest {
 		when(repository.existsById(99L)).thenReturn(false);
 
 		assertThrows(ResourceNotFoundException.class, () -> service.deleteProject(99L));
+	}
+
+	@Test
+	void deleteProjectDeletesExistingProject() {
+		when(repository.existsById(1L)).thenReturn(true);
+
+		service.deleteProject(1L);
+
+		verify(repository).deleteById(1L);
 	}
 
 	@Test
@@ -186,6 +333,26 @@ class ProjectServiceImplTest {
 		service.addMember(1L, 99L);
 
 		assertTrue(project.getMemberUserIds().contains(99L));
+		verify(repository).save(project);
+	}
+
+	@Test
+	void addMemberRejectsArchivedProject() {
+		project.setArchived(true);
+		when(repository.findById(1L)).thenReturn(Optional.of(project));
+
+		assertThrows(InvalidProjectRequestException.class, () -> service.addMember(1L, 99L));
+		verify(repository, never()).save(any(Project.class));
+	}
+
+	@Test
+	void removeMemberPersistsUpdatedMemberSet() {
+		when(repository.findById(1L)).thenReturn(Optional.of(project));
+
+		service.removeMember(1L, 11L);
+
+		assertFalse(project.getMemberUserIds().contains(11L));
+		assertTrue(project.getMemberUserIds().contains(12L));
 		verify(repository).save(project);
 	}
 
