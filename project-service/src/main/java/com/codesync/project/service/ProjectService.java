@@ -27,6 +27,8 @@ public interface ProjectService {
 
 	ProjectDTO forkProject(Long projectId, Long newOwnerId);
 
+	void rollbackFork(Long sourceProjectId, Long forkProjectId);
+
 	void starProject(Long projectId);
 
 	List<ProjectDTO> getProjectsByLanguage(String language);

@@ -141,6 +141,22 @@ public class ProjectServiceImpl implements ProjectService {
 	}
 
 	@Override
+	public void rollbackFork(Long sourceProjectId, Long forkProjectId) {
+		validatePositiveId(sourceProjectId, "Source project id");
+		validatePositiveId(forkProjectId, "Fork project id");
+
+		Project sourceProject = getProjectOrThrow(sourceProjectId);
+		if (sourceProject.getForkCount() > 0) {
+			sourceProject.setForkCount(sourceProject.getForkCount() - 1);
+			repository.save(sourceProject);
+		}
+
+		if (repository.existsById(forkProjectId)) {
+			repository.deleteById(forkProjectId);
+		}
+	}
+
+	@Override
 	public void starProject(Long id) {
 		validatePositiveId(id, "Project id");
 		Project project = getProjectOrThrow(id);
@@ -237,6 +253,9 @@ public class ProjectServiceImpl implements ProjectService {
 		if (!StringUtils.hasText(dto.getName())) {
 			throw new InvalidProjectRequestException("Project name is required");
 		}
+		if (!StringUtils.hasText(dto.getLanguage())) {
+			throw new InvalidProjectRequestException("Language is required");
+		}
 		if (dto.getVisibility() == null) {
 			throw new InvalidProjectRequestException("Visibility is required");
 		}
@@ -254,7 +273,7 @@ public class ProjectServiceImpl implements ProjectService {
 		}
 		project.setName(dto.getName().trim());
 		project.setDescription(StringUtils.hasText(dto.getDescription()) ? dto.getDescription().trim() : null);
-		project.setLanguage(StringUtils.hasText(dto.getLanguage()) ? dto.getLanguage().trim() : null);
+		project.setLanguage(dto.getLanguage().trim());
 		project.setVisibility(dto.getVisibility());
 		project.setTemplateId(dto.getTemplateId());
 		project.setMemberUserIds(dto.getMemberUserIds());

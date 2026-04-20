@@ -126,6 +126,14 @@ class ProjectServiceImplTest {
 	}
 
 	@Test
+	void createProjectRejectsMissingLanguage() {
+		projectDTO.setLanguage(" ");
+
+		assertThrows(InvalidProjectRequestException.class, () -> service.createProject(projectDTO));
+		verify(repository, never()).save(any(Project.class));
+	}
+
+	@Test
 	void createProjectRejectsInvalidTemplateId() {
 		projectDTO.setTemplateId(0L);
 
@@ -371,6 +379,19 @@ class ProjectServiceImplTest {
 
 		assertThrows(InvalidProjectRequestException.class, () -> service.forkProject(1L, 99L));
 		verify(repository, never()).save(any(Project.class));
+	}
+
+	@Test
+	void rollbackForkRemovesForkAndDecrementsCounter() {
+		project.setForkCount(2);
+		when(repository.findById(1L)).thenReturn(Optional.of(project));
+		when(repository.existsById(99L)).thenReturn(true);
+
+		service.rollbackFork(1L, 99L);
+
+		assertEquals(1, project.getForkCount());
+		verify(repository).save(project);
+		verify(repository).deleteById(99L);
 	}
 
 	@Test
