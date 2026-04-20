@@ -1,0 +1,49 @@
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.0.5)
+
+2026-04-20T15:30:33.633+05:30  INFO 3088 --- [eureka-server] [           main] c.c.eureka.EurekaServerApplication       : Starting EurekaServerApplication v0.0.1-SNAPSHOT using Java 21.0.10 with PID 3088 (D:\Code Collaboration Platform\CodeSync\eureka-server\target\eureka-server-0.0.1-SNAPSHOT.jar started by tdeep in D:\Code Collaboration Platform\CodeSync\eureka-server)
+2026-04-20T15:30:33.646+05:30  INFO 3088 --- [eureka-server] [           main] c.c.eureka.EurekaServerApplication       : No active profile set, falling back to 1 default profile: "default"
+2026-04-20T15:30:35.983+05:30  INFO 3088 --- [eureka-server] [           main] o.s.cloud.context.scope.GenericScope     : BeanFactory id=5b2f4e04-944e-3f93-9e77-0c0754bff74e
+2026-04-20T15:30:36.456+05:30  INFO 3088 --- [eureka-server] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat initialized with port 8761 (http)
+2026-04-20T15:30:36.470+05:30  INFO 3088 --- [eureka-server] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-04-20T15:30:36.471+05:30  INFO 3088 --- [eureka-server] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/11.0.20]
+2026-04-20T15:30:36.501+05:30  INFO 3088 --- [eureka-server] [           main] b.w.c.s.WebApplicationContextInitializer : Root WebApplicationContext: initialization completed in 2746 ms
+2026-04-20T15:30:37.920+05:30  INFO 3088 --- [eureka-server] [           main] c.n.d.provider.DiscoveryJerseyProvider   : Using JSON encoding codec LegacyJacksonJson
+2026-04-20T15:30:37.922+05:30  INFO 3088 --- [eureka-server] [           main] c.n.d.provider.DiscoveryJerseyProvider   : Using JSON decoding codec LegacyJacksonJson
+2026-04-20T15:30:38.217+05:30  INFO 3088 --- [eureka-server] [           main] c.n.d.provider.DiscoveryJerseyProvider   : Using XML encoding codec XStreamXml
+2026-04-20T15:30:38.217+05:30  INFO 3088 --- [eureka-server] [           main] c.n.d.provider.DiscoveryJerseyProvider   : Using XML decoding codec XStreamXml
+2026-04-20T15:30:38.443+05:30  INFO 3088 --- [eureka-server] [           main] o.s.v.b.OptionalValidatorFactoryBean     : Failed to set up a Bean Validation provider: jakarta.validation.NoProviderFoundException: Unable to create a Configuration, because no Jakarta Validation provider could be found. Add a provider like Hibernate Validator (RI) to your classpath.
+2026-04-20T15:30:39.584+05:30  WARN 3088 --- [eureka-server] [           main] iguration$LoadBalancerCaffeineWarnLogger : Spring Cloud LoadBalancer is currently working with the default cache. While this cache implementation is useful for development and tests, it's recommended to use Caffeine cache in production.You can switch to using Caffeine cache, by adding it and org.springframework.cache.caffeine.CaffeineCacheManager to the classpath.
+2026-04-20T15:30:39.616+05:30  INFO 3088 --- [eureka-server] [           main] o.s.c.n.eureka.InstanceInfoFactory       : Setting initial instance status as: STARTING
+2026-04-20T15:30:39.645+05:30  INFO 3088 --- [eureka-server] [           main] com.netflix.discovery.DiscoveryClient    : Initializing Eureka in region us-east-1
+2026-04-20T15:30:39.646+05:30  INFO 3088 --- [eureka-server] [           main] com.netflix.discovery.DiscoveryClient    : Client configured to neither register nor query for data.
+2026-04-20T15:30:39.651+05:30  INFO 3088 --- [eureka-server] [           main] com.netflix.discovery.DiscoveryClient    : Discovery Client initialized at timestamp 1776679239648 with initial instances count: 0
+2026-04-20T15:30:39.755+05:30  INFO 3088 --- [eureka-server] [           main] c.n.eureka.DefaultEurekaServerContext    : Initializing ...
+2026-04-20T15:30:39.757+05:30  INFO 3088 --- [eureka-server] [           main] c.n.eureka.cluster.PeerEurekaNodes       : Adding new peer nodes [http://localhost:8761/eureka/]
+2026-04-20T15:30:40.004+05:30  INFO 3088 --- [eureka-server] [           main] c.n.d.provider.DiscoveryJerseyProvider   : Using JSON encoding codec LegacyJacksonJson
+2026-04-20T15:30:40.004+05:30  INFO 3088 --- [eureka-server] [           main] c.n.d.provider.DiscoveryJerseyProvider   : Using JSON decoding codec LegacyJacksonJson
+2026-04-20T15:30:40.006+05:30  INFO 3088 --- [eureka-server] [           main] c.n.d.provider.DiscoveryJerseyProvider   : Using XML encoding codec XStreamXml
+2026-04-20T15:30:40.006+05:30  INFO 3088 --- [eureka-server] [           main] c.n.d.provider.DiscoveryJerseyProvider   : Using XML decoding codec XStreamXml
+2026-04-20T15:30:40.077+05:30  INFO 3088 --- [eureka-server] [           main] c.n.eureka.cluster.PeerEurekaNodes       : Replica node URL:  http://localhost:8761/eureka/
+2026-04-20T15:30:40.085+05:30  INFO 3088 --- [eureka-server] [           main] c.n.e.registry.AbstractInstanceRegistry  : Finished initializing remote region registries. All known remote regions: []
+2026-04-20T15:30:40.086+05:30  INFO 3088 --- [eureka-server] [           main] c.n.eureka.DefaultEurekaServerContext    : Initialized
+2026-04-20T15:30:40.107+05:30  INFO 3088 --- [eureka-server] [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 2 endpoints beneath base path '/actuator'
+2026-04-20T15:30:40.191+05:30  INFO 3088 --- [eureka-server] [           main] o.s.c.n.e.s.EurekaServiceRegistry        : Registering application EUREKA-SERVER with eureka with status UP
+2026-04-20T15:30:40.228+05:30  INFO 3088 --- [eureka-server] [       Thread-9] o.s.c.n.e.server.EurekaServerBootstrap   : isAws returned false
+2026-04-20T15:30:40.230+05:30  INFO 3088 --- [eureka-server] [       Thread-9] o.s.c.n.e.server.EurekaServerBootstrap   : Initialized server context
+2026-04-20T15:30:40.231+05:30  INFO 3088 --- [eureka-server] [       Thread-9] c.n.e.r.PeerAwareInstanceRegistryImpl    : Got 1 instances from neighboring DS node
+2026-04-20T15:30:40.231+05:30  INFO 3088 --- [eureka-server] [       Thread-9] c.n.e.r.PeerAwareInstanceRegistryImpl    : Renew threshold is: 1
+2026-04-20T15:30:40.232+05:30  INFO 3088 --- [eureka-server] [       Thread-9] c.n.e.r.PeerAwareInstanceRegistryImpl    : Changing status to UP
+2026-04-20T15:30:40.238+05:30  INFO 3088 --- [eureka-server] [       Thread-9] e.s.EurekaServerInitializerConfiguration : Started Eureka Server
+2026-04-20T15:30:40.268+05:30  INFO 3088 --- [eureka-server] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat started on port 8761 (http) with context path '/'
+2026-04-20T15:30:40.271+05:30  INFO 3088 --- [eureka-server] [           main] .s.c.n.e.s.EurekaAutoServiceRegistration : Updating port to 8761
+2026-04-20T15:30:40.309+05:30  INFO 3088 --- [eureka-server] [           main] c.c.eureka.EurekaServerApplication       : Started EurekaServerApplication in 7.415 seconds (process running for 8.329)
+2026-04-20T15:31:40.235+05:30  INFO 3088 --- [eureka-server] [a-EvictionTimer] c.n.e.registry.AbstractInstanceRegistry  : Running the evict task with compensationTime 0ms
+2026-04-20T15:32:40.235+05:30  INFO 3088 --- [eureka-server] [a-EvictionTimer] c.n.e.registry.AbstractInstanceRegistry  : Running the evict task with compensationTime 0ms
