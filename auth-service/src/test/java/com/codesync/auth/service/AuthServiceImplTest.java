@@ -31,7 +31,6 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class AuthServiceImplTest {
-
 	private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
 	@Mock
