@@ -1,5 +1,7 @@
 package com.codesync.auth.dto;
 
+import java.time.LocalDateTime;
+
 public class UserResponse {
 	private int userId;
 	private String username;
@@ -7,7 +9,10 @@ public class UserResponse {
 	private String fullName;
 	private String role;
 	private String avatarUrl;
+	private String provider;
 	private String bio;
+	private boolean active;
+	private LocalDateTime createdAt;
 
 	public int getUserId() {
 		return userId;
@@ -57,12 +62,36 @@ public class UserResponse {
 		this.avatarUrl = avatarUrl;
 	}
 
+	public String getProvider() {
+		return provider;
+	}
+
+	public void setProvider(String provider) {
+		this.provider = provider;
+	}
+
 	public String getBio() {
 		return bio;
 	}
 
 	public void setBio(String bio) {
 		this.bio = bio;
+	}
+
+	public boolean isActive() {
+		return active;
+	}
+
+	public void setActive(boolean active) {
+		this.active = active;
+	}
+
+	public LocalDateTime getCreatedAt() {
+		return createdAt;
+	}
+
+	public void setCreatedAt(LocalDateTime createdAt) {
+		this.createdAt = createdAt;
 	}
 
 }

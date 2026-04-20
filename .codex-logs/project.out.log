@@ -1,0 +1,123 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] --------------------< com.codesync:project-service >--------------------
+[INFO] Building project-service 0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] >>> spring-boot:4.0.5:run (default-cli) > test-compile @ project-service >>>
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ project-service ---
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] Copying 0 resource from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ project-service ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ project-service ---
+[INFO] Copying 1 resource from src\test\resources to target\test-classes
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ project-service ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] <<< spring-boot:4.0.5:run (default-cli) < test-compile @ project-service <<<
+[INFO] 
+[INFO] 
+[INFO] --- spring-boot:4.0.5:run (default-cli) @ project-service ---
+[INFO] Attaching agents: []
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.0.5)
+
+2026-04-20T20:17:16.616+05:30  INFO 1908 --- [project-service] [           main] c.c.project.ProjectServiceApplication    : Starting ProjectServiceApplication using Java 21.0.10 with PID 1908 (D:\Code Collaboration Platform\CodeSync\project-service\target\classes started by tdeep in D:\Code Collaboration Platform\CodeSync\project-service)
+2026-04-20T20:17:16.625+05:30  INFO 1908 --- [project-service] [           main] c.c.project.ProjectServiceApplication    : No active profile set, falling back to 1 default profile: "default"
+2026-04-20T20:17:19.014+05:30  INFO 1908 --- [project-service] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-04-20T20:17:19.273+05:30  INFO 1908 --- [project-service] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 242 ms. Found 1 JPA repository interface.
+2026-04-20T20:17:19.892+05:30  INFO 1908 --- [project-service] [           main] o.s.cloud.context.scope.GenericScope     : BeanFactory id=95d986c0-12b6-334f-91fa-b0b184b5e38c
+2026-04-20T20:17:20.571+05:30  INFO 1908 --- [project-service] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat initialized with port 8082 (http)
+2026-04-20T20:17:20.601+05:30  INFO 1908 --- [project-service] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-04-20T20:17:20.603+05:30  INFO 1908 --- [project-service] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/11.0.20]
+2026-04-20T20:17:20.734+05:30  INFO 1908 --- [project-service] [           main] b.w.c.s.WebApplicationContextInitializer : Root WebApplicationContext: initialization completed in 3989 ms
+2026-04-20T20:17:21.259+05:30  INFO 1908 --- [project-service] [           main] org.hibernate.orm.jpa                    : HHH008540: Processing PersistenceUnitInfo [name: default]
+2026-04-20T20:17:21.403+05:30  INFO 1908 --- [project-service] [           main] org.hibernate.orm.core                   : HHH000001: Hibernate ORM core version 7.2.7.Final
+2026-04-20T20:17:22.245+05:30  INFO 1908 --- [project-service] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-04-20T20:17:22.313+05:30  INFO 1908 --- [project-service] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-04-20T20:17:22.683+05:30  INFO 1908 --- [project-service] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@129e45eb
+2026-04-20T20:17:22.687+05:30  INFO 1908 --- [project-service] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-04-20T20:17:22.871+05:30  INFO 1908 --- [project-service] [           main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [jdbc:mysql://localhost:3306/project_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC]
+	Database driver: MySQL Connector/J
+	Database dialect: MySQLDialect
+	Database version: 8.0.45
+	Default catalog/schema: project_db/undefined
+	Autocommit mode: undefined/unknown
+	Isolation level: REPEATABLE_READ [default REPEATABLE_READ]
+	JDBC fetch size: none
+	Pool: DataSourceConnectionProvider
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-04-20T20:17:24.462+05:30  INFO 1908 --- [project-service] [           main] org.hibernate.orm.core                   : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+Hibernate: alter table projects modify column visibility enum ('PRIVATE','PUBLIC') not null
+2026-04-20T20:17:24.864+05:30  INFO 1908 --- [project-service] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-04-20T20:17:25.402+05:30  INFO 1908 --- [project-service] [           main] o.s.d.j.r.query.QueryEnhancerFactories   : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-04-20T20:17:27.489+05:30  WARN 1908 --- [project-service] [           main] .s.a.UserDetailsServiceAutoConfiguration : 
+
+Using generated security password: 4655947b-f355-4b83-9ddc-6e6d5221327d
+
+This generated password is for development use only. Your security configuration must be updated before running your application in production.
+
+2026-04-20T20:17:27.509+05:30  INFO 1908 --- [project-service] [           main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name inMemoryUserDetailsManager
+2026-04-20T20:17:28.924+05:30  INFO 1908 --- [project-service] [           main] DiscoveryClientOptionalArgsConfiguration : Eureka HTTP Client uses RestClient.
+2026-04-20T20:17:29.000+05:30  WARN 1908 --- [project-service] [           main] iguration$LoadBalancerCaffeineWarnLogger : Spring Cloud LoadBalancer is currently working with the default cache. While this cache implementation is useful for development and tests, it's recommended to use Caffeine cache in production.You can switch to using Caffeine cache, by adding it and org.springframework.cache.caffeine.CaffeineCacheManager to the classpath.
+2026-04-20T20:17:29.019+05:30  INFO 1908 --- [project-service] [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 2 endpoints beneath base path '/actuator'
+2026-04-20T20:17:29.125+05:30  INFO 1908 --- [project-service] [           main] o.s.c.n.eureka.InstanceInfoFactory       : Setting initial instance status as: STARTING
+2026-04-20T20:17:29.172+05:30  INFO 1908 --- [project-service] [           main] com.netflix.discovery.DiscoveryClient    : Initializing Eureka in region us-east-1
+2026-04-20T20:17:29.178+05:30  INFO 1908 --- [project-service] [           main] c.n.d.s.r.aws.ConfigClusterResolver      : Resolving eureka endpoints via configuration
+2026-04-20T20:17:29.195+05:30  INFO 1908 --- [project-service] [           main] com.netflix.discovery.DiscoveryClient    : Disable delta property : false
+2026-04-20T20:17:29.195+05:30  INFO 1908 --- [project-service] [           main] com.netflix.discovery.DiscoveryClient    : Single vip registry refresh property : null
+2026-04-20T20:17:29.196+05:30  INFO 1908 --- [project-service] [           main] com.netflix.discovery.DiscoveryClient    : Force full registry fetch : false
+2026-04-20T20:17:29.197+05:30  INFO 1908 --- [project-service] [           main] com.netflix.discovery.DiscoveryClient    : Application is null : false
+2026-04-20T20:17:29.198+05:30  INFO 1908 --- [project-service] [           main] com.netflix.discovery.DiscoveryClient    : Registered Applications size is zero : true
+2026-04-20T20:17:29.199+05:30  INFO 1908 --- [project-service] [           main] com.netflix.discovery.DiscoveryClient    : Application version is -1: true
+2026-04-20T20:17:29.200+05:30  INFO 1908 --- [project-service] [           main] com.netflix.discovery.DiscoveryClient    : Getting all instance registry info from the eureka server
+2026-04-20T20:17:29.730+05:30  INFO 1908 --- [project-service] [           main] com.netflix.discovery.DiscoveryClient    : The response status is 200
+2026-04-20T20:17:29.736+05:30  INFO 1908 --- [project-service] [           main] com.netflix.discovery.DiscoveryClient    : Starting heartbeat executor: renew interval is: 30
+2026-04-20T20:17:29.741+05:30  INFO 1908 --- [project-service] [           main] c.n.discovery.InstanceInfoReplicator     : InstanceInfoReplicator onDemand update allowed rate per min is 4
+2026-04-20T20:17:29.747+05:30  INFO 1908 --- [project-service] [           main] com.netflix.discovery.DiscoveryClient    : Discovery Client initialized at timestamp 1776696449745 with initial instances count: 0
+2026-04-20T20:17:29.760+05:30  INFO 1908 --- [project-service] [           main] o.s.c.n.e.s.EurekaServiceRegistry        : Registering application PROJECT-SERVICE with eureka with status UP
+2026-04-20T20:17:29.762+05:30  INFO 1908 --- [project-service] [           main] com.netflix.discovery.DiscoveryClient    : Saw local status change event StatusChangeEvent [timestamp=1776696449762, current=UP, previous=STARTING]
+2026-04-20T20:17:29.769+05:30  INFO 1908 --- [project-service] [foReplicator-%d] com.netflix.discovery.DiscoveryClient    : DiscoveryClient_PROJECT-SERVICE/project-service:c5be3c17b1dd1460b596e1562cd10db3: registering service...
+2026-04-20T20:17:29.825+05:30  INFO 1908 --- [project-service] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat started on port 8082 (http) with context path '/'
+2026-04-20T20:17:29.829+05:30  INFO 1908 --- [project-service] [           main] .s.c.n.e.s.EurekaAutoServiceRegistration : Updating port to 8082
+2026-04-20T20:17:29.885+05:30  INFO 1908 --- [project-service] [           main] c.c.project.ProjectServiceApplication    : Started ProjectServiceApplication in 14.464 seconds (process running for 16.144)
+2026-04-20T20:17:29.889+05:30  INFO 1908 --- [project-service] [foReplicator-%d] com.netflix.discovery.DiscoveryClient    : DiscoveryClient_PROJECT-SERVICE/project-service:c5be3c17b1dd1460b596e1562cd10db3 - registration status: 204
+2026-04-20T20:17:59.748+05:30  INFO 1908 --- [project-service] [reshExecutor-%d] com.netflix.discovery.DiscoveryClient    : Disable delta property : false
+2026-04-20T20:17:59.750+05:30  INFO 1908 --- [project-service] [reshExecutor-%d] com.netflix.discovery.DiscoveryClient    : Single vip registry refresh property : null
+2026-04-20T20:17:59.752+05:30  INFO 1908 --- [project-service] [reshExecutor-%d] com.netflix.discovery.DiscoveryClient    : Force full registry fetch : false
+2026-04-20T20:17:59.753+05:30  INFO 1908 --- [project-service] [reshExecutor-%d] com.netflix.discovery.DiscoveryClient    : Application is null : false
+2026-04-20T20:17:59.754+05:30  INFO 1908 --- [project-service] [reshExecutor-%d] com.netflix.discovery.DiscoveryClient    : Registered Applications size is zero : true
+2026-04-20T20:17:59.756+05:30  INFO 1908 --- [project-service] [reshExecutor-%d] com.netflix.discovery.DiscoveryClient    : Application version is -1: false
+2026-04-20T20:17:59.758+05:30  INFO 1908 --- [project-service] [reshExecutor-%d] com.netflix.discovery.DiscoveryClient    : Getting all instance registry info from the eureka server
+2026-04-20T20:17:59.819+05:30  INFO 1908 --- [project-service] [reshExecutor-%d] com.netflix.discovery.DiscoveryClient    : The response status is 200
+2026-04-20T20:18:07.851+05:30  INFO 1908 --- [project-service] [nio-8082-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-20T20:18:07.852+05:30  INFO 1908 --- [project-service] [nio-8082-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-04-20T20:18:07.855+05:30  INFO 1908 --- [project-service] [nio-8082-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 2 ms
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  05:08 min
+[INFO] Finished at: 2026-04-20T20:22:16+05:30
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.springframework.boot:spring-boot-maven-plugin:4.0.5:run (default-cli) on project project-service: Process terminated with exit code: -1 -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoExecutionException

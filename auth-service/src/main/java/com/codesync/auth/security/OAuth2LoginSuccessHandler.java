@@ -5,21 +5,25 @@ import com.codesync.auth.service.AuthService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.io.IOException;
 import java.util.Map;
 
 @Component
 public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
 	private final AuthService authService;
+	private final String gatewayBaseUrl;
 
-	public OAuth2LoginSuccessHandler(AuthService authService) {
+	public OAuth2LoginSuccessHandler(AuthService authService,
+			@Value("${codesync.gateway-base-url:http://localhost:8080}") String gatewayBaseUrl) {
 		this.authService = authService;
+		this.gatewayBaseUrl = gatewayBaseUrl;
 	}
 
 	@Override
@@ -39,7 +43,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
 		User user = authService.upsertOAuthUser(email, username, name, provider);
 		String token = authService.issueToken(user);
 
-		String redirectUrl = "http://localhost:8080/login/oauth2/code/" + provider.toLowerCase()
+		String redirectUrl = gatewayBaseUrl + "/login/oauth2/code/" + provider.toLowerCase()
 				+ "?success=true&token=" + token;
 		getRedirectStrategy().sendRedirect(request, response, redirectUrl);
 	}

@@ -74,18 +74,43 @@ public class AuthResource {
 		return UserMapper.toDTO(user);
 	}
 
+	@GetMapping("/profile")
+	public UserResponse getCurrentProfile(Authentication authentication) {
+		return UserMapper.toDTO(service.getUserById(requireCurrentUserId(authentication)));
+	}
+
 	@PutMapping("/profile/{id}")
 	public UserResponse updateProfile(@PathVariable int id, @Valid @RequestBody UpdateProfileRequest request,
 			Authentication authentication) {
 		assertCanActOnUser(id, authentication);
-		User user = new User();
-		user.setUsername(request.getUsername());
-		user.setEmail(request.getEmail());
-		user.setFullName(request.getFullName());
-		user.setAvatarUrl(request.getAvatarUrl());
-		user.setBio(request.getBio());
-		User updated = service.updateProfile(id, user);
-		return UserMapper.toDTO(updated);
+		return updateProfileInternal(id, request);
+	}
+
+	@PutMapping("/profile")
+	public UserResponse updateCurrentProfile(@Valid @RequestBody UpdateProfileRequest request,
+			Authentication authentication) {
+		return updateProfileInternal(requireCurrentUserId(authentication), request);
+	}
+
+	@PutMapping("/password")
+	public ResponseEntity<Void> changeCurrentPassword(@Valid @RequestBody ChangePasswordRequest request,
+			Authentication authentication) {
+		service.changePassword(requireCurrentUserId(authentication), request.getCurrentPassword(),
+				request.getNewPassword());
+		return ResponseEntity.noContent().build();
+	}
+
+	@PutMapping("/deactivate")
+	public ResponseEntity<Void> deactivateCurrentAccount(Authentication authentication) {
+		service.deactivateAccount(requireCurrentUserId(authentication));
+		return ResponseEntity.noContent().build();
+	}
+
+	@PutMapping("/deactivate/{id}")
+	public ResponseEntity<Void> deactivateById(@PathVariable int id, Authentication authentication) {
+		assertCanActOnUser(id, authentication);
+		service.deactivateAccount(id);
+		return ResponseEntity.noContent().build();
 	}
 
 	@PutMapping("/password/{id}")
@@ -96,17 +121,28 @@ public class AuthResource {
 		return ResponseEntity.noContent().build();
 	}
 
-	@GetMapping("/search")
-	public List<UserResponse> search(@RequestParam String username) {
-		List<User> users = service.searchUsers(username);
-		return users.stream().map(UserMapper::toDTO).collect(Collectors.toList());
-	}
-
 	@DeleteMapping("/deactivate/{id}")
 	public ResponseEntity<Void> deactivate(@PathVariable int id, Authentication authentication) {
 		assertCanActOnUser(id, authentication);
 		service.deactivateAccount(id);
 		return ResponseEntity.noContent().build();
+	}
+
+	private UserResponse updateProfileInternal(int id, UpdateProfileRequest request) {
+		User user = new User();
+		user.setUsername(request.getUsername());
+		user.setEmail(request.getEmail());
+		user.setFullName(request.getFullName());
+		user.setAvatarUrl(request.getAvatarUrl());
+		user.setBio(request.getBio());
+		User updated = service.updateProfile(id, user);
+		return UserMapper.toDTO(updated);
+	}
+
+	@GetMapping("/search")
+	public List<UserResponse> search(@RequestParam String username) {
+		List<User> users = service.searchUsers(username);
+		return users.stream().map(UserMapper::toDTO).collect(Collectors.toList());
 	}
 
 	private void assertCanActOnUser(int targetUserId, Authentication authentication) {
@@ -123,5 +159,12 @@ public class AuthResource {
 			throw new AuthException("Bearer token is required");
 		}
 		return authorizationHeader.substring(7);
+	}
+
+	private int requireCurrentUserId(Authentication authentication) {
+		if (authentication == null || !(authentication.getPrincipal() instanceof AuthenticatedUser currentUser)) {
+			throw new AuthException("Authentication is required");
+		}
+		return currentUser.userId();
 	}
 }

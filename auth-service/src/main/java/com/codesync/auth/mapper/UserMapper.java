@@ -13,7 +13,10 @@ public class UserMapper {
 		dto.setFullName(user.getFullName());
 		dto.setRole(user.getRole());
 		dto.setAvatarUrl(user.getAvatarUrl());
+		dto.setProvider(user.getProvider());
 		dto.setBio(user.getBio());
+		dto.setActive(user.isActive());
+		dto.setCreatedAt(user.getCreatedAt());
 		return dto;
 	}
 }
