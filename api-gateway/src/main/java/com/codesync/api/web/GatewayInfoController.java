@@ -11,7 +11,8 @@ public class GatewayInfoController {
 	private static final Map<String, String> SERVICE_ROUTES = Map.of(
 			"authService", "/auth/**, /oauth2/**, /login/oauth2/**",
 			"projectService", "/api/v1/projects/**",
-			"fileService", "/api/v1/files/**");
+			"fileService", "/api/v1/files/**",
+			"collabService", "/api/v1/sessions/**");
 
 	@GetMapping({ "/", "/gateway/info" })
 	public Map<String, Object> gatewayInfo() {
