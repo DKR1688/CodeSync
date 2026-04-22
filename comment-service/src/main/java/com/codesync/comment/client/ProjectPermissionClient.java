@@ -3,7 +3,8 @@ package com.codesync.comment.client;
 import com.codesync.comment.dto.ProjectPermissionDTO;
 import com.codesync.comment.exception.DownstreamServiceException;
 import com.codesync.comment.exception.ResourceNotFoundException;
-import org.springframework.cloud.client.loadbalancer.LoadBalanced;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
@@ -18,8 +19,9 @@ public class ProjectPermissionClient {
 
 	private final RestClient restClient;
 
-	public ProjectPermissionClient(@LoadBalanced RestClient.Builder restClientBuilder) {
-		this.restClient = restClientBuilder.baseUrl("http://PROJECT-SERVICE").build();
+	public ProjectPermissionClient(@Qualifier("restClientBuilder") RestClient.Builder restClientBuilder,
+			@Value("${comment.client.project-service-url:http://localhost:8082}") String projectServiceUrl) {
+		this.restClient = restClientBuilder.baseUrl(projectServiceUrl).build();
 	}
 
 	public ProjectPermissionDTO getPermissions(Long projectId, String authorizationHeader) {
@@ -45,6 +47,8 @@ public class ProjectPermissionClient {
 		} catch (ResourceAccessException ex) {
 			throw new DownstreamServiceException("Project service is unavailable", ex);
 		} catch (RestClientException ex) {
+			throw new DownstreamServiceException("Project service request failed", ex);
+		} catch (RuntimeException ex) {
 			throw new DownstreamServiceException("Project service request failed", ex);
 		}
 	}

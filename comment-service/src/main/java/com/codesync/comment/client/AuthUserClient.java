@@ -3,7 +3,8 @@ package com.codesync.comment.client;
 import com.codesync.comment.dto.UserSummary;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.cloud.client.loadbalancer.LoadBalanced;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
@@ -21,8 +22,9 @@ public class AuthUserClient {
 
 	private final RestClient restClient;
 
-	public AuthUserClient(@LoadBalanced RestClient.Builder restClientBuilder) {
-		this.restClient = restClientBuilder.baseUrl("http://AUTH-SERVICE").build();
+	public AuthUserClient(@Qualifier("restClientBuilder") RestClient.Builder restClientBuilder,
+			@Value("${comment.client.auth-service-url:http://localhost:8081}") String authServiceUrl) {
+		this.restClient = restClientBuilder.baseUrl(authServiceUrl).build();
 	}
 
 	public Optional<UserSummary> findActiveUserByUsername(String username, String authorizationHeader) {
@@ -44,6 +46,9 @@ public class AuthUserClient {
 					.filter(user -> username.equalsIgnoreCase(user.getUsername()))
 					.findFirst();
 		} catch (RestClientException ex) {
+			LOGGER.warn("Unable to resolve mentioned user '{}': {}", username, ex.getMessage());
+			return Optional.empty();
+		} catch (RuntimeException ex) {
 			LOGGER.warn("Unable to resolve mentioned user '{}': {}", username, ex.getMessage());
 			return Optional.empty();
 		}

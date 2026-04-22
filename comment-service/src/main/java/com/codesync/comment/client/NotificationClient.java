@@ -3,7 +3,8 @@ package com.codesync.comment.client;
 import com.codesync.comment.dto.NotificationRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.cloud.client.loadbalancer.LoadBalanced;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -17,8 +18,9 @@ public class NotificationClient {
 
 	private final RestClient restClient;
 
-	public NotificationClient(@LoadBalanced RestClient.Builder restClientBuilder) {
-		this.restClient = restClientBuilder.baseUrl("http://NOTIFICATION-SERVICE").build();
+	public NotificationClient(@Qualifier("restClientBuilder") RestClient.Builder restClientBuilder,
+			@Value("${comment.client.notification-service-url:http://localhost:8087}") String notificationServiceUrl) {
+		this.restClient = restClientBuilder.baseUrl(notificationServiceUrl).build();
 	}
 
 	public void send(NotificationRequest request, String authorizationHeader) {
@@ -30,6 +32,9 @@ public class NotificationClient {
 					.retrieve()
 					.toBodilessEntity();
 		} catch (RestClientException ex) {
+			LOGGER.warn("Unable to dispatch comment notification for recipient {}: {}",
+					request != null ? request.getRecipientId() : null, ex.getMessage());
+		} catch (RuntimeException ex) {
 			LOGGER.warn("Unable to dispatch comment notification for recipient {}: {}",
 					request != null ? request.getRecipientId() : null, ex.getMessage());
 		}
