@@ -46,6 +46,15 @@ public class AuthServiceImpl implements AuthService {
 	}
 
 	@Override
+	public User registerFirstAdmin(User user) {
+		if (repo.existsByRoleIgnoreCase("ADMIN")) {
+			throw new AuthException("Admin user already exists");
+		}
+		user.setRole("ADMIN");
+		return register(user);
+	}
+
+	@Override
 	public User upsertOAuthUser(String email, String username, String fullName, String provider) {
 		String normalizedEmail = normalizeEmail(email);
 		String normalizedProvider = defaultProvider(provider);

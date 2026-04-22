@@ -8,6 +8,8 @@ public interface AuthService {
 
 	User register(User user);
 
+	User registerFirstAdmin(User user);
+
 	User upsertOAuthUser(String email, String username, String fullName, String provider);
 
 	String issueToken(User user);

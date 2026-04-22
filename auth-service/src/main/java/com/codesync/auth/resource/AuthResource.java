@@ -50,6 +50,18 @@ public class AuthResource {
 		return UserMapper.toDTO(saved);
 	}
 
+	@PostMapping("/admin/bootstrap")
+	public UserResponse bootstrapAdmin(@Valid @RequestBody RegisterRequest request) {
+		User user = new User();
+		user.setUsername(request.getUsername());
+		user.setEmail(request.getEmail());
+		user.setPasswordHash(request.getPassword());
+		user.setFullName(request.getFullName());
+
+		User saved = service.registerFirstAdmin(user);
+		return UserMapper.toDTO(saved);
+	}
+
 	@PostMapping("/login")
 	public AuthResponse login(@Valid @RequestBody LoginRequest request) {
 		String token = service.login(request.getEmail(), request.getPassword());
