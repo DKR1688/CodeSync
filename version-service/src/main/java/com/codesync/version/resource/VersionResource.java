@@ -45,8 +45,9 @@ public class VersionResource {
 	public ResponseEntity<Snapshot> createSnapshot(@Valid @RequestBody CreateSnapshotRequest request,
 			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
+		Long currentUserId = requireCurrentUserId(authentication);
 		verifyWriteAccess(request.getProjectId(), authorizationHeader);
-		Snapshot snapshot = service.createSnapshot(request, requireCurrentUserId(authentication));
+		Snapshot snapshot = service.createSnapshot(request, currentUserId);
 		return ResponseEntity.status(HttpStatus.CREATED).body(snapshot);
 	}
 

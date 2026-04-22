@@ -3,6 +3,7 @@ package com.codesync.version.client;
 import com.codesync.version.dto.ProjectPermissionDTO;
 import com.codesync.version.exception.DownstreamServiceException;
 import com.codesync.version.exception.ResourceNotFoundException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
@@ -16,13 +17,25 @@ import org.springframework.web.client.RestClientResponseException;
 @Component
 public class ProjectPermissionClient {
 
-	private final RestClient restClient;
+	private final RestClient loadBalancedRestClient;
+	private final RestClient directRestClient;
 
-	public ProjectPermissionClient(@LoadBalanced RestClient.Builder restClientBuilder) {
-		this.restClient = restClientBuilder.baseUrl("http://PROJECT-SERVICE").build();
+	public ProjectPermissionClient(@LoadBalanced RestClient.Builder loadBalancedRestClientBuilder,
+			RestClient.Builder restClientBuilder,
+			@Value("${codesync.services.project.base-url:http://localhost:8082}") String projectServiceBaseUrl) {
+		this.loadBalancedRestClient = loadBalancedRestClientBuilder.baseUrl("http://PROJECT-SERVICE").build();
+		this.directRestClient = restClientBuilder.baseUrl(projectServiceBaseUrl).build();
 	}
 
 	public ProjectPermissionDTO getPermissions(Long projectId, String authorizationHeader) {
+		try {
+			return requestPermissions(loadBalancedRestClient, projectId, authorizationHeader);
+		} catch (IllegalStateException ex) {
+			return requestPermissions(directRestClient, projectId, authorizationHeader);
+		}
+	}
+
+	private ProjectPermissionDTO requestPermissions(RestClient restClient, Long projectId, String authorizationHeader) {
 		try {
 			ProjectPermissionDTO response = restClient.get()
 					.uri("/api/v1/projects/{id}/permissions", projectId)

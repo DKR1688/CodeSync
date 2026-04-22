@@ -3,6 +3,7 @@ package com.codesync.version.client;
 import com.codesync.version.dto.FileContentUpdateRequest;
 import com.codesync.version.exception.DownstreamServiceException;
 import com.codesync.version.exception.ResourceNotFoundException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
@@ -16,13 +17,25 @@ import org.springframework.web.client.RestClientResponseException;
 @Component
 public class FileServiceClient {
 
-	private final RestClient restClient;
+	private final RestClient loadBalancedRestClient;
+	private final RestClient directRestClient;
 
-	public FileServiceClient(@LoadBalanced RestClient.Builder restClientBuilder) {
-		this.restClient = restClientBuilder.baseUrl("http://FILE-SERVICE").build();
+	public FileServiceClient(@LoadBalanced RestClient.Builder loadBalancedRestClientBuilder,
+			RestClient.Builder restClientBuilder,
+			@Value("${codesync.services.file.base-url:http://localhost:8083}") String fileServiceBaseUrl) {
+		this.loadBalancedRestClient = loadBalancedRestClientBuilder.baseUrl("http://FILE-SERVICE").build();
+		this.directRestClient = restClientBuilder.baseUrl(fileServiceBaseUrl).build();
 	}
 
 	public void updateFileContent(Long fileId, String content, String authorizationHeader) {
+		try {
+			updateFileContent(loadBalancedRestClient, fileId, content, authorizationHeader);
+		} catch (IllegalStateException ex) {
+			updateFileContent(directRestClient, fileId, content, authorizationHeader);
+		}
+	}
+
+	private void updateFileContent(RestClient restClient, Long fileId, String content, String authorizationHeader) {
 		try {
 			restClient.put()
 					.uri("/api/v1/files/{id}/content", fileId)

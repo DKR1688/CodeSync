@@ -14,9 +14,9 @@ import java.util.Objects;
 
 @Entity
 @Table(name = "snapshots", indexes = {
-		@Index(name = "idx_snapshot_project", columnList = "projectId"),
-		@Index(name = "idx_snapshot_file", columnList = "fileId"),
-		@Index(name = "idx_snapshot_author", columnList = "authorId"),
+		@Index(name = "idx_snapshot_project", columnList = "project_id"),
+		@Index(name = "idx_snapshot_file", columnList = "file_id"),
+		@Index(name = "idx_snapshot_author", columnList = "author_id"),
 		@Index(name = "idx_snapshot_branch", columnList = "branch"),
 		@Index(name = "idx_snapshot_hash", columnList = "hash"),
 		@Index(name = "idx_snapshot_tag", columnList = "tag")
@@ -25,15 +25,16 @@ public class Snapshot {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@Column(name = "snapshot_id")
 	private Long snapshotId;
 
-	@Column(nullable = false)
+	@Column(name = "project_id", nullable = false)
 	private Long projectId;
 
-	@Column(nullable = false)
+	@Column(name = "file_id", nullable = false)
 	private Long fileId;
 
-	@Column(nullable = false)
+	@Column(name = "author_id", nullable = false)
 	private Long authorId;
 
 	@Column(nullable = false, length = 1000)
@@ -45,6 +46,7 @@ public class Snapshot {
 	@Column(nullable = false, length = 64)
 	private String hash;
 
+	@Column(name = "parent_snapshot_id")
 	private Long parentSnapshotId;
 
 	@Column(nullable = false, length = 100)
