@@ -145,6 +145,42 @@ class CollabServiceImplTest {
 	}
 
 	@Test
+	void joinSessionReportsProjectPermissionMismatchClearly() {
+		CollabSession session = activeSession();
+		ProjectPermissionDTO deniedPermissions = new ProjectPermissionDTO();
+		deniedPermissions.setProjectId(10L);
+		deniedPermissions.setCanRead(false);
+
+		when(sessionRepository.findById(session.getSessionId())).thenReturn(Optional.of(session));
+		when(projectPermissionClient.getPermissions(10L, "Bearer other-user")).thenReturn(deniedPermissions);
+
+		AccessDeniedException ex = assertThrows(AccessDeniedException.class,
+				() -> service.joinSession(session.getSessionId(), new JoinSessionRequest(), 55L, "Bearer other-user"));
+
+		assertEquals("User 55 does not have access to project 10. Add this user to the project or use a token for the project owner/member before joining the collaboration session.",
+				ex.getMessage());
+		verify(participantRepository, never()).save(any(Participant.class));
+	}
+
+	@Test
+	void updateCursorBeforeJoinReportsSameTokenJoinRequirement() {
+		CollabSession session = activeSession();
+		CursorUpdateRequest request = new CursorUpdateRequest();
+		request.setCursorLine(1);
+		request.setCursorCol(2);
+
+		when(sessionRepository.findById(session.getSessionId())).thenReturn(Optional.of(session));
+		when(participantRepository.findBySessionSessionIdAndUserIdAndLeftAtIsNull(session.getSessionId(), 55L))
+				.thenReturn(Optional.empty());
+
+		AccessDeniedException ex = assertThrows(AccessDeniedException.class,
+				() -> service.updateCursor(session.getSessionId(), request, 55L));
+
+		assertEquals("User 55 is not an active participant in this session. Join the session with the same token before updating cursor or content.",
+				ex.getMessage());
+	}
+
+	@Test
 	void broadcastChangeUpdatesRevisionPersistsFileAndBroadcastsSync() {
 		CollabSession session = activeSession();
 		Participant participant = activeParticipant(session, 77L, ParticipantRole.EDITOR);

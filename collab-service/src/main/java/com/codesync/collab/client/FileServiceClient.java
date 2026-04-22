@@ -3,7 +3,7 @@ package com.codesync.collab.client;
 import com.codesync.collab.dto.CodeFileDTO;
 import com.codesync.collab.exception.DownstreamServiceException;
 import com.codesync.collab.exception.ResourceNotFoundException;
-import org.springframework.cloud.client.loadbalancer.LoadBalanced;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
@@ -20,8 +20,9 @@ public class FileServiceClient {
 
 	private final RestClient restClient;
 
-	public FileServiceClient(@LoadBalanced RestClient.Builder restClientBuilder) {
-		this.restClient = restClientBuilder.baseUrl("http://FILE-SERVICE").build();
+	public FileServiceClient(RestClient.Builder restClientBuilder,
+			@Value("${file.service.url:http://localhost:8083}") String fileServiceUrl) {
+		this.restClient = restClientBuilder.baseUrl(fileServiceUrl).build();
 	}
 
 	public CodeFileDTO getFileById(Long fileId, String authorizationHeader) {

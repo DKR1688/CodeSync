@@ -2,7 +2,7 @@ package com.codesync.project.client;
 
 import com.codesync.project.exception.DownstreamServiceException;
 import com.codesync.project.exception.InvalidProjectRequestException;
-import org.springframework.cloud.client.loadbalancer.LoadBalanced;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResourceAccessException;
@@ -15,8 +15,9 @@ public class AuthServiceClient {
 
 	private final RestClient restClient;
 
-	public AuthServiceClient(@LoadBalanced RestClient.Builder restClientBuilder) {
-		this.restClient = restClientBuilder.baseUrl("http://AUTH-SERVICE").build();
+	public AuthServiceClient(RestClient.Builder restClientBuilder,
+			@Value("${auth.service.url:http://localhost:8081}") String authServiceUrl) {
+		this.restClient = restClientBuilder.baseUrl(authServiceUrl).build();
 	}
 
 	public void assertUserExists(Long userId) {

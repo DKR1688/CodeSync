@@ -167,7 +167,7 @@ public class CollabServiceImpl implements CollabService {
 		CollabSession session = requireActiveSession(sessionId);
 		ProjectPermissionDTO permissions = requirePermissions(session.getProjectId(), authorizationHeader);
 		if (!permissions.isCanRead()) {
-			throw new AccessDeniedException("You do not have access to this collaboration session");
+			throw new AccessDeniedException(projectAccessMessage(actorUserId, session.getProjectId()));
 		}
 
 		Participant existing = participantRepository.findBySessionSessionIdAndUserIdAndLeftAtIsNull(sessionId, actorUserId)
@@ -347,7 +347,8 @@ public class CollabServiceImpl implements CollabService {
 
 	private Participant requireActiveParticipant(String sessionId, Long userId) {
 		return participantRepository.findBySessionSessionIdAndUserIdAndLeftAtIsNull(sessionId, userId)
-				.orElseThrow(() -> new AccessDeniedException("You are not an active participant in this session"));
+				.orElseThrow(() -> new AccessDeniedException("User " + userId
+						+ " is not an active participant in this session. Join the session with the same token before updating cursor or content."));
 	}
 
 	private Participant requireActiveTargetParticipant(String sessionId, Long userId) {
@@ -364,6 +365,11 @@ public class CollabServiceImpl implements CollabService {
 		if (!permissions.isCanRead()) {
 			throw new AccessDeniedException("You do not have access to this collaboration session");
 		}
+	}
+
+	private String projectAccessMessage(Long actorUserId, Long projectId) {
+		return "User " + actorUserId + " does not have access to project " + projectId
+				+ ". Add this user to the project or use a token for the project owner/member before joining the collaboration session.";
 	}
 
 	private void applySessionPassword(CollabSession session, String password) {
@@ -392,7 +398,8 @@ public class CollabServiceImpl implements CollabService {
 			throw new InvalidCollabRequestException("Only the session owner can be the host");
 		}
 		if (requestedRole == ParticipantRole.EDITOR && !permissions.isCanWrite()) {
-			throw new AccessDeniedException("You do not have edit access for this project");
+			throw new AccessDeniedException("User " + actorUserId + " does not have edit access for project "
+					+ session.getProjectId() + ". Add this user as a project member before joining as EDITOR.");
 		}
 		return requestedRole;
 	}
