@@ -3,7 +3,7 @@ package com.codesync.file.client;
 import com.codesync.file.dto.ProjectPermissionDTO;
 import com.codesync.file.exception.DownstreamServiceException;
 import com.codesync.file.exception.ResourceNotFoundException;
-import org.springframework.cloud.client.loadbalancer.LoadBalanced;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
@@ -18,8 +18,9 @@ public class ProjectPermissionClient {
 
 	private final RestClient restClient;
 
-	public ProjectPermissionClient(@LoadBalanced RestClient.Builder restClientBuilder) {
-		this.restClient = restClientBuilder.baseUrl("http://PROJECT-SERVICE").build();
+	public ProjectPermissionClient(RestClient.Builder restClientBuilder,
+			@Value("${project.service.url:http://localhost:8082}") String projectServiceUrl) {
+		this.restClient = restClientBuilder.baseUrl(projectServiceUrl).build();
 	}
 
 	public ProjectPermissionDTO getPermissions(Long projectId, String authorizationHeader) {
