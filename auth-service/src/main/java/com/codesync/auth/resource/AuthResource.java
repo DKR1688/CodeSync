@@ -157,12 +157,41 @@ public class AuthResource {
 		return users.stream().map(UserMapper::toDTO).collect(Collectors.toList());
 	}
 
+	@GetMapping("/users")
+	public List<UserResponse> getAllUsers(Authentication authentication) {
+		assertAdmin(authentication);
+		return service.getAllUsers().stream().map(UserMapper::toDTO).collect(Collectors.toList());
+	}
+
+	@PutMapping("/reactivate/{id}")
+	public ResponseEntity<Void> reactivate(@PathVariable int id, Authentication authentication) {
+		assertAdmin(authentication);
+		service.reactivateAccount(id);
+		return ResponseEntity.noContent().build();
+	}
+
+	@DeleteMapping("/users/{id}")
+	public ResponseEntity<Void> deleteUser(@PathVariable int id, Authentication authentication) {
+		assertAdmin(authentication);
+		service.deleteAccount(id);
+		return ResponseEntity.noContent().build();
+	}
+
 	private void assertCanActOnUser(int targetUserId, Authentication authentication) {
 		if (authentication == null || !(authentication.getPrincipal() instanceof AuthenticatedUser currentUser)) {
 			throw new AuthException("Authentication is required");
 		}
 		if (!currentUser.isAdmin() && currentUser.userId() != targetUserId) {
 			throw new AccessDeniedException("Access denied");
+		}
+	}
+
+	private void assertAdmin(Authentication authentication) {
+		if (authentication == null || !(authentication.getPrincipal() instanceof AuthenticatedUser currentUser)) {
+			throw new AuthException("Authentication is required");
+		}
+		if (!currentUser.isAdmin()) {
+			throw new AccessDeniedException("Admin access is required");
 		}
 	}
 

@@ -55,6 +55,12 @@ public class ProjectServiceImpl implements ProjectService {
 
 	@Override
 	@Transactional(readOnly = true)
+	public List<ProjectDTO> getAllProjects() {
+		return repository.findAll(RECENT_FIRST_SORT).stream().map(this::toDTO).collect(Collectors.toList());
+	}
+
+	@Override
+	@Transactional(readOnly = true)
 	public List<ProjectDTO> getProjectsByOwner(Long ownerId) {
 		validatePositiveId(ownerId, "Owner id");
 		return repository.findByOwnerId(ownerId, RECENT_FIRST_SORT).stream().map(this::toDTO).collect(Collectors.toList());

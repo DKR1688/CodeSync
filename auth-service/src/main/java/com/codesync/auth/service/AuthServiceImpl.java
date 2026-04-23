@@ -150,6 +150,11 @@ public class AuthServiceImpl implements AuthService {
 	}
 
 	@Override
+	public List<User> getAllUsers() {
+		return repo.findAll();
+	}
+
+	@Override
 	public User updateProfile(int id, User user) {
 		User existing = findUserById(id);
 
@@ -209,6 +214,19 @@ public class AuthServiceImpl implements AuthService {
 		User user = findUserById(id);
 		user.setActive(false);
 		repo.save(user);
+	}
+
+	@Override
+	public void reactivateAccount(int id) {
+		User user = findUserById(id);
+		user.setActive(true);
+		repo.save(user);
+	}
+
+	@Override
+	public void deleteAccount(int id) {
+		findUserById(id);
+		repo.deleteByUserId(id);
 	}
 
 	private void validateNewUserIdentity(String email, String username) {

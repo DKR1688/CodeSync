@@ -26,6 +26,8 @@ public interface AuthService {
 
 	User getUserById(int id);
 
+	List<User> getAllUsers();
+
 	User updateProfile(int id, User user);
 
 	void changePassword(int id, String currentPassword, String newPassword);
@@ -33,4 +35,8 @@ public interface AuthService {
 	List<User> searchUsers(String username);
 
 	void deactivateAccount(int id);
+
+	void reactivateAccount(int id);
+
+	void deleteAccount(int id);
 }

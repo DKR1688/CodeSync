@@ -11,6 +11,8 @@ public interface ProjectService {
 
 	ProjectDTO getProjectById(Long projectId);
 
+	List<ProjectDTO> getAllProjects();
+
 	List<ProjectDTO> getProjectsByOwner(Long ownerId);
 
 	List<ProjectDTO> getPublicProjects();

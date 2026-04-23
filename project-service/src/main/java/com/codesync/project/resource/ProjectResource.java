@@ -83,6 +83,14 @@ public class ProjectResource {
 		return service.getPublicProjects();
 	}
 
+	@GetMapping("/admin/all")
+	public List<ProjectDTO> getAllProjects(Authentication authentication) {
+		if (!isAdmin(authentication)) {
+			throw new AccessDeniedException("Administrator access is required");
+		}
+		return service.getAllProjects();
+	}
+
 	@GetMapping("/search")
 	public List<ProjectDTO> searchProjects(@RequestParam(required = false) String name,
 			@RequestParam(required = false) String keyword) {
