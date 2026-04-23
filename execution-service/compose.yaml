@@ -1,16 +1,16 @@
 services:
-  postgres:
-    image: 'postgres:latest'
+  mysql:
+    image: 'mysql:8.4'
     environment:
-      - 'POSTGRES_DB=mydatabase'
-      - 'POSTGRES_PASSWORD=secret'
-      - 'POSTGRES_USER=myuser'
+      - 'MYSQL_DATABASE=execution_db'
+      - 'MYSQL_ROOT_PASSWORD=deepak@1234'
     ports:
-      - '5432'
+      - '3308:3306'
   rabbitmq:
-    image: 'rabbitmq:latest'
+    image: 'rabbitmq:3-management'
     environment:
-      - 'RABBITMQ_DEFAULT_PASS=secret'
-      - 'RABBITMQ_DEFAULT_USER=myuser'
+      - 'RABBITMQ_DEFAULT_PASS=guest'
+      - 'RABBITMQ_DEFAULT_USER=guest'
     ports:
-      - '5672'
+      - '5672:5672'
+      - '15672:15672'
