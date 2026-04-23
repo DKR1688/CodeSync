@@ -1,0 +1,254 @@
+package com.codesync.project.resource;
+
+import com.codesync.project.client.AuthServiceClient;
+import com.codesync.project.client.FileServiceClient;
+import com.codesync.project.dto.ProjectDTO;
+import com.codesync.project.dto.ProjectPermissionDTO;
+import com.codesync.project.enums.Visibility;
+import com.codesync.project.security.AuthenticatedUser;
+import com.codesync.project.service.ProjectService;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.util.StringUtils;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Set;
+
+@RestController
+@Validated
+@RequestMapping("/api/v1/projects")
+public class ProjectResource {
+
+	private final ProjectService service;
+	private final AuthServiceClient authServiceClient;
+	private final FileServiceClient fileServiceClient;
+
+	public ProjectResource(ProjectService service, AuthServiceClient authServiceClient,
+			FileServiceClient fileServiceClient) {
+		this.service = service;
+		this.authServiceClient = authServiceClient;
+		this.fileServiceClient = fileServiceClient;
+	}
+
+	@PostMapping
+	public ResponseEntity<ProjectDTO> createProject(@Valid @RequestBody ProjectDTO dto, Authentication authentication) {
+		dto.setOwnerId(requireCurrentUserId(authentication));
+		return ResponseEntity.status(HttpStatus.CREATED).body(service.createProject(dto));
+	}
+
+	@GetMapping("/{id}")
+	public ProjectDTO getProjectById(@PathVariable Long id, Authentication authentication) {
+		ProjectDTO project = service.getProjectById(id);
+		assertCanViewProject(project, authentication);
+		return project;
+	}
+
+	@GetMapping("/{id}/permissions")
+	public ProjectPermissionDTO getProjectPermissions(@PathVariable Long id, Authentication authentication) {
+		ProjectDTO project = service.getProjectById(id);
+		Long currentUserId = resolveCurrentUserId(authentication);
+		boolean admin = isAdmin(authentication);
+		boolean owner = currentUserId != null && project.getOwnerId().equals(currentUserId);
+		boolean member = currentUserId != null && project.getMemberUserIds().contains(currentUserId);
+		boolean canRead = project.getVisibility() == Visibility.PUBLIC || admin || owner || member;
+		boolean canWrite = !project.isArchived() && (admin || owner || member);
+		boolean canManage = admin || owner;
+
+		return new ProjectPermissionDTO(
+				project.getProjectId(),
+				canRead,
+				canWrite,
+				canManage,
+				owner,
+				member,
+				admin,
+				project.isArchived(),
+				project.getVisibility());
+	}
+
+	@GetMapping("/owner/{ownerId}")
+	public List<ProjectDTO> getProjectsByOwner(@PathVariable Long ownerId, Authentication authentication) {
+		return service.getProjectsByOwner(ownerId).stream()
+				.filter(project -> canViewProject(project, authentication))
+				.toList();
+	}
+
+	@GetMapping("/public")
+	public List<ProjectDTO> getPublicProjects() {
+		return service.getPublicProjects();
+	}
+
+	@GetMapping("/admin/all")
+	public List<ProjectDTO> getAllProjects(Authentication authentication) {
+		if (!isAdmin(authentication)) {
+			throw new AccessDeniedException("Administrator access is required");
+		}
+		return service.getAllProjects();
+	}
+
+	@GetMapping("/search")
+	public List<ProjectDTO> searchProjects(@RequestParam(required = false) String name,
+			@RequestParam(required = false) String keyword) {
+		String searchValue = StringUtils.hasText(name) ? name : keyword;
+		return service.searchProjects(searchValue);
+	}
+
+	@GetMapping("/member/{userId}")
+	public List<ProjectDTO> getProjectsByMember(@PathVariable Long userId, Authentication authentication) {
+		assertSameUserOrAdmin(userId, authentication);
+		return service.getProjectsByMember(userId);
+	}
+
+	@GetMapping("/language/{lang}")
+	public List<ProjectDTO> getProjectsByLanguage(@PathVariable String lang) {
+		return service.getProjectsByLanguage(lang);
+	}
+
+	@GetMapping("/{id}/members")
+	public Set<Long> getProjectMembers(@PathVariable Long id, Authentication authentication) {
+		ProjectDTO project = service.getProjectById(id);
+		assertCanViewProject(project, authentication);
+		return service.getProjectMembers(id);
+	}
+
+	@PutMapping("/{id}")
+	public ProjectDTO updateProject(@PathVariable Long id, @Valid @RequestBody ProjectDTO dto,
+			Authentication authentication) {
+		ProjectDTO existingProject = service.getProjectById(id);
+		assertOwnerOrAdmin(existingProject, authentication);
+		dto.setOwnerId(existingProject.getOwnerId());
+		return service.updateProject(id, dto);
+	}
+
+	@PutMapping("/{id}/archive")
+	public ResponseEntity<Void> archiveProject(@PathVariable Long id, Authentication authentication) {
+		assertOwnerOrAdmin(service.getProjectById(id), authentication);
+		service.archiveProject(id);
+		return ResponseEntity.noContent().build();
+	}
+
+	@PutMapping("/{id}/star")
+	public ResponseEntity<Void> starProject(@PathVariable Long id, Authentication authentication) {
+		ProjectDTO project = service.getProjectById(id);
+		assertCanViewProject(project, authentication);
+		requireCurrentUserId(authentication);
+		service.starProject(id);
+		return ResponseEntity.noContent().build();
+	}
+
+	@PostMapping("/{id}/fork/{userId}")
+	public ResponseEntity<ProjectDTO> forkProject(@PathVariable Long id, @PathVariable Long userId,
+			Authentication authentication,
+			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
+		Long currentUserId = requireCurrentUserId(authentication);
+		if (!currentUserId.equals(userId)) {
+			throw new AccessDeniedException("You can only fork projects into your own account");
+		}
+		ProjectDTO source = service.getProjectById(id);
+		if (source.getVisibility() != Visibility.PUBLIC && !isAdmin(authentication)) {
+			throw new AccessDeniedException("Only public projects can be forked");
+		}
+		ProjectDTO forkedProject = service.forkProject(id, currentUserId);
+		try {
+			fileServiceClient.copyProjectFiles(id, forkedProject.getProjectId(), authorizationHeader);
+		} catch (RuntimeException ex) {
+			service.rollbackFork(id, forkedProject.getProjectId());
+			throw ex;
+		}
+		return ResponseEntity.status(HttpStatus.CREATED).body(forkedProject);
+	}
+
+	@PostMapping("/{id}/members/{userId}")
+	public ResponseEntity<Void> addMember(@PathVariable Long id, @PathVariable Long userId, Authentication authentication) {
+		assertOwnerOrAdmin(service.getProjectById(id), authentication);
+		authServiceClient.assertUserExists(userId);
+		service.addMember(id, userId);
+		return ResponseEntity.noContent().build();
+	}
+
+	@DeleteMapping("/{id}/members/{userId}")
+	public ResponseEntity<Void> removeMember(@PathVariable Long id, @PathVariable Long userId,
+			Authentication authentication) {
+		assertOwnerOrAdmin(service.getProjectById(id), authentication);
+		service.removeMember(id, userId);
+		return ResponseEntity.noContent().build();
+	}
+
+	@DeleteMapping("/{id}")
+	public ResponseEntity<Void> deleteProject(@PathVariable Long id, Authentication authentication) {
+		assertOwnerOrAdmin(service.getProjectById(id), authentication);
+		service.deleteProject(id);
+		return ResponseEntity.noContent().build();
+	}
+
+	private void assertCanViewProject(ProjectDTO project, Authentication authentication) {
+		if (!canViewProject(project, authentication)) {
+			throw new AccessDeniedException("You do not have access to this project");
+		}
+	}
+
+	private boolean canViewProject(ProjectDTO project, Authentication authentication) {
+		if (project.getVisibility() == Visibility.PUBLIC) {
+			return true;
+		}
+		if (authentication == null) {
+			return false;
+		}
+		Long currentUserId = requireCurrentUserId(authentication);
+		return isAdmin(authentication)
+				|| project.getOwnerId().equals(currentUserId)
+				|| project.getMemberUserIds().contains(currentUserId);
+	}
+
+	private void assertOwnerOrAdmin(ProjectDTO project, Authentication authentication) {
+		Long currentUserId = requireCurrentUserId(authentication);
+		if (!isAdmin(authentication) && !project.getOwnerId().equals(currentUserId)) {
+			throw new AccessDeniedException("Only the project owner or an admin can perform this action");
+		}
+	}
+
+	private void assertSameUserOrAdmin(Long expectedUserId, Authentication authentication) {
+		Long currentUserId = requireCurrentUserId(authentication);
+		if (!isAdmin(authentication) && !expectedUserId.equals(currentUserId)) {
+			throw new AccessDeniedException("You can only access your own member projects");
+		}
+	}
+
+	private Long requireCurrentUserId(Authentication authentication) {
+		Long currentUserId = resolveCurrentUserId(authentication);
+		if (currentUserId == null) {
+			throw new AccessDeniedException("Authentication is required");
+		}
+		return currentUserId;
+	}
+
+	private Long resolveCurrentUserId(Authentication authentication) {
+		if (authentication == null || !authentication.isAuthenticated()) {
+			return null;
+		}
+		Object principal = authentication.getPrincipal();
+		if (principal instanceof AuthenticatedUser user) {
+			return user.userId();
+		}
+		String name = authentication.getName();
+		try {
+			return Long.valueOf(name);
+		} catch (NumberFormatException ex) {
+			return null;
+		}
+	}
+
+	private boolean isAdmin(Authentication authentication) {
+		Object principal = authentication != null ? authentication.getPrincipal() : null;
+		if (principal instanceof AuthenticatedUser user) {
+			return user.isAdmin();
+		}
+		return authentication != null && authentication.getAuthorities().stream()
+				.anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
+	}
+}

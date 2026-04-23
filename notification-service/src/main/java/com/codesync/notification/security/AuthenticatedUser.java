@@ -1,0 +1,8 @@
+package com.codesync.notification.security;
+
+public record AuthenticatedUser(Long userId, String email, String role) {
+
+	public boolean isAdmin() {
+		return "ADMIN".equalsIgnoreCase(role);
+	}
+}
