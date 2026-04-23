@@ -12,7 +12,11 @@ public class GatewayInfoController {
 			"authService", "/auth/**, /oauth2/**, /login/oauth2/**",
 			"projectService", "/api/v1/projects/**",
 			"fileService", "/api/v1/files/**",
-			"collabService", "/api/v1/sessions/**");
+			"collabService", "/api/v1/sessions/**",
+			"versionService", "/api/v1/versions/**",
+			"commentService", "/api/v1/comments/**",
+			"notificationService", "/api/v1/notifications/**, /ws/notifications/**",
+			"executionService", "/api/v1/executions/**, /ws/executions/**");
 
 	@GetMapping({ "/", "/gateway/info" })
 	public Map<String, Object> gatewayInfo() {

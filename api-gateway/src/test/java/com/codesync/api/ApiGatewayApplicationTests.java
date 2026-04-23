@@ -33,7 +33,14 @@ class ApiGatewayApplicationTests {
 				.jsonPath("$.name").isEqualTo("CodeSync API Gateway")
 				.jsonPath("$.serviceRoutes.authService").isEqualTo("/auth/**, /oauth2/**, /login/oauth2/**")
 				.jsonPath("$.serviceRoutes.projectService").isEqualTo("/api/v1/projects/**")
-				.jsonPath("$.serviceRoutes.fileService").isEqualTo("/api/v1/files/**");
+				.jsonPath("$.serviceRoutes.fileService").isEqualTo("/api/v1/files/**")
+				.jsonPath("$.serviceRoutes.collabService").isEqualTo("/api/v1/sessions/**")
+				.jsonPath("$.serviceRoutes.versionService").isEqualTo("/api/v1/versions/**")
+				.jsonPath("$.serviceRoutes.commentService").isEqualTo("/api/v1/comments/**")
+				.jsonPath("$.serviceRoutes.notificationService")
+				.isEqualTo("/api/v1/notifications/**, /ws/notifications/**")
+				.jsonPath("$.serviceRoutes.executionService")
+				.isEqualTo("/api/v1/executions/**, /ws/executions/**");
 	}
 
 	@Test
@@ -43,7 +50,10 @@ class ApiGatewayApplicationTests {
 				.get()
 				.uri("/actuator/gateway/routes")
 				.exchange()
-				.expectStatus().isOk();
+				.expectStatus().isOk()
+				.expectBody()
+				.jsonPath("$.length()").isEqualTo(8)
+				.jsonPath("$[0].uri").exists();
 	}
 
 }
