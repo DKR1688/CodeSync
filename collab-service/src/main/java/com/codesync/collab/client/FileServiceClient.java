@@ -4,6 +4,7 @@ import com.codesync.collab.dto.CodeFileDTO;
 import com.codesync.collab.exception.DownstreamServiceException;
 import com.codesync.collab.exception.ResourceNotFoundException;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
@@ -18,14 +19,25 @@ import java.util.Map;
 @Component
 public class FileServiceClient {
 
-	private final RestClient restClient;
+	private final RestClient discoveryRestClient;
+	private final RestClient directRestClient;
 
-	public FileServiceClient(RestClient.Builder restClientBuilder,
+	public FileServiceClient(@LoadBalanced RestClient.Builder loadBalancedRestClientBuilder,
+			RestClient.Builder restClientBuilder,
 			@Value("${file.service.url:http://localhost:8083}") String fileServiceUrl) {
-		this.restClient = restClientBuilder.baseUrl(fileServiceUrl).build();
+		this.discoveryRestClient = loadBalancedRestClientBuilder.baseUrl("http://FILE-SERVICE").build();
+		this.directRestClient = restClientBuilder.baseUrl(fileServiceUrl).build();
 	}
 
 	public CodeFileDTO getFileById(Long fileId, String authorizationHeader) {
+		try {
+			return getFileById(discoveryRestClient, fileId, authorizationHeader);
+		} catch (IllegalStateException ex) {
+			return getFileById(directRestClient, fileId, authorizationHeader);
+		}
+	}
+
+	private CodeFileDTO getFileById(RestClient restClient, Long fileId, String authorizationHeader) {
 		try {
 			CodeFileDTO response = restClient.get()
 					.uri("/api/v1/files/{id}", fileId)
@@ -53,6 +65,16 @@ public class FileServiceClient {
 	}
 
 	public void updateContent(Long fileId, String content, String authorizationHeader) {
+		try {
+			updateContent(discoveryRestClient, fileId, content, authorizationHeader);
+			return;
+		} catch (IllegalStateException ex) {
+			// Discovery not ready, fall back to the configured direct URL.
+		}
+		updateContent(directRestClient, fileId, content, authorizationHeader);
+	}
+
+	private void updateContent(RestClient restClient, Long fileId, String content, String authorizationHeader) {
 		try {
 			restClient.put()
 					.uri("/api/v1/files/{id}/content", fileId)

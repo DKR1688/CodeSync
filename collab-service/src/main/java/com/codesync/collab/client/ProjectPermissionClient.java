@@ -4,6 +4,7 @@ import com.codesync.collab.dto.ProjectPermissionDTO;
 import com.codesync.collab.exception.DownstreamServiceException;
 import com.codesync.collab.exception.ResourceNotFoundException;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
@@ -16,14 +17,25 @@ import org.springframework.web.client.RestClientResponseException;
 @Component
 public class ProjectPermissionClient {
 
-	private final RestClient restClient;
+	private final RestClient discoveryRestClient;
+	private final RestClient directRestClient;
 
-	public ProjectPermissionClient(RestClient.Builder restClientBuilder,
+	public ProjectPermissionClient(@LoadBalanced RestClient.Builder loadBalancedRestClientBuilder,
+			RestClient.Builder restClientBuilder,
 			@Value("${project.service.url:http://localhost:8082}") String projectServiceUrl) {
-		this.restClient = restClientBuilder.baseUrl(projectServiceUrl).build();
+		this.discoveryRestClient = loadBalancedRestClientBuilder.baseUrl("http://PROJECT-SERVICE").build();
+		this.directRestClient = restClientBuilder.baseUrl(projectServiceUrl).build();
 	}
 
 	public ProjectPermissionDTO getPermissions(Long projectId, String authorizationHeader) {
+		try {
+			return getPermissions(discoveryRestClient, projectId, authorizationHeader);
+		} catch (IllegalStateException ex) {
+			return getPermissions(directRestClient, projectId, authorizationHeader);
+		}
+	}
+
+	private ProjectPermissionDTO getPermissions(RestClient restClient, Long projectId, String authorizationHeader) {
 		try {
 			ProjectPermissionDTO response = restClient.get()
 					.uri("/api/v1/projects/{id}/permissions", projectId)
