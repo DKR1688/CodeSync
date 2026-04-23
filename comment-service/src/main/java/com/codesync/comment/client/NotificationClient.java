@@ -3,8 +3,8 @@ package com.codesync.comment.client;
 import com.codesync.comment.dto.NotificationRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -16,14 +16,27 @@ public class NotificationClient {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(NotificationClient.class);
 
-	private final RestClient restClient;
+	private final RestClient discoveryRestClient;
+	private final RestClient directRestClient;
 
-	public NotificationClient(@Qualifier("restClientBuilder") RestClient.Builder restClientBuilder,
+	public NotificationClient(@LoadBalanced RestClient.Builder loadBalancedRestClientBuilder,
+			RestClient.Builder restClientBuilder,
 			@Value("${comment.client.notification-service-url:http://localhost:8087}") String notificationServiceUrl) {
-		this.restClient = restClientBuilder.baseUrl(notificationServiceUrl).build();
+		this.discoveryRestClient = loadBalancedRestClientBuilder.baseUrl("http://NOTIFICATION-SERVICE").build();
+		this.directRestClient = restClientBuilder.baseUrl(notificationServiceUrl).build();
 	}
 
 	public void send(NotificationRequest request, String authorizationHeader) {
+		try {
+			send(discoveryRestClient, request, authorizationHeader);
+			return;
+		} catch (IllegalStateException ex) {
+			// Discovery not ready, fall back to the configured direct URL.
+		}
+		send(directRestClient, request, authorizationHeader);
+	}
+
+	private void send(RestClient restClient, NotificationRequest request, String authorizationHeader) {
 		try {
 			restClient.post()
 					.uri("/api/v1/notifications")

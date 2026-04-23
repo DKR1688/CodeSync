@@ -3,8 +3,8 @@ package com.codesync.comment.client;
 import com.codesync.comment.dto.UserSummary;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
@@ -20,17 +20,29 @@ public class AuthUserClient {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(AuthUserClient.class);
 
-	private final RestClient restClient;
+	private final RestClient discoveryRestClient;
+	private final RestClient directRestClient;
 
-	public AuthUserClient(@Qualifier("restClientBuilder") RestClient.Builder restClientBuilder,
+	public AuthUserClient(@LoadBalanced RestClient.Builder loadBalancedRestClientBuilder,
+			RestClient.Builder restClientBuilder,
 			@Value("${comment.client.auth-service-url:http://localhost:8081}") String authServiceUrl) {
-		this.restClient = restClientBuilder.baseUrl(authServiceUrl).build();
+		this.discoveryRestClient = loadBalancedRestClientBuilder.baseUrl("http://AUTH-SERVICE").build();
+		this.directRestClient = restClientBuilder.baseUrl(authServiceUrl).build();
 	}
 
 	public Optional<UserSummary> findActiveUserByUsername(String username, String authorizationHeader) {
 		if (!StringUtils.hasText(username)) {
 			return Optional.empty();
 		}
+		try {
+			return findActiveUserByUsername(discoveryRestClient, username, authorizationHeader);
+		} catch (IllegalStateException ex) {
+			return findActiveUserByUsername(directRestClient, username, authorizationHeader);
+		}
+	}
+
+	private Optional<UserSummary> findActiveUserByUsername(RestClient restClient, String username,
+			String authorizationHeader) {
 		try {
 			List<UserSummary> users = restClient.get()
 					.uri(uriBuilder -> uriBuilder.path("/auth/search").queryParam("username", username).build())
