@@ -3,6 +3,7 @@ package com.codesync.project.client;
 import com.codesync.project.exception.DownstreamServiceException;
 import com.codesync.project.exception.InvalidProjectRequestException;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResourceAccessException;
@@ -13,14 +14,27 @@ import org.springframework.web.client.RestClientResponseException;
 @Component
 public class AuthServiceClient {
 
-	private final RestClient restClient;
+	private final RestClient discoveryRestClient;
+	private final RestClient directRestClient;
 
-	public AuthServiceClient(RestClient.Builder restClientBuilder,
+	public AuthServiceClient(@LoadBalanced RestClient.Builder loadBalancedRestClientBuilder,
+			RestClient.Builder restClientBuilder,
 			@Value("${auth.service.url:http://localhost:8081}") String authServiceUrl) {
-		this.restClient = restClientBuilder.baseUrl(authServiceUrl).build();
+		this.discoveryRestClient = loadBalancedRestClientBuilder.baseUrl("http://AUTH-SERVICE").build();
+		this.directRestClient = restClientBuilder.baseUrl(authServiceUrl).build();
 	}
 
 	public void assertUserExists(Long userId) {
+		try {
+			assertUserExists(discoveryRestClient, userId);
+			return;
+		} catch (IllegalStateException ex) {
+			// Discovery not ready, fall back to the configured direct URL.
+		}
+		assertUserExists(directRestClient, userId);
+	}
+
+	private void assertUserExists(RestClient restClient, Long userId) {
 		try {
 			UserLookupResponse response = restClient.get()
 					.uri("/auth/profile/{id}", userId)
