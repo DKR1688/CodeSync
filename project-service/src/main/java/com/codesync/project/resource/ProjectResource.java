@@ -5,6 +5,7 @@ import com.codesync.project.client.FileServiceClient;
 import com.codesync.project.dto.ProjectDTO;
 import com.codesync.project.dto.ProjectPermissionDTO;
 import com.codesync.project.enums.Visibility;
+import com.codesync.project.exception.InvalidProjectRequestException;
 import com.codesync.project.security.AuthenticatedUser;
 import com.codesync.project.service.ProjectService;
 import jakarta.validation.Valid;
@@ -116,9 +117,34 @@ public class ProjectResource {
 
 	@GetMapping("/search")
 	public List<ProjectDTO> searchProjects(@RequestParam(required = false) String name,
-			@RequestParam(required = false) String keyword) {
+			@RequestParam(required = false) String keyword,
+			@RequestParam(required = false) String ownerUsername) {
 		String searchValue = StringUtils.hasText(name) ? name : keyword;
-		return service.searchProjects(searchValue);
+		boolean hasNameFilter = StringUtils.hasText(searchValue);
+		boolean hasOwnerFilter = StringUtils.hasText(ownerUsername);
+		if (!hasNameFilter && !hasOwnerFilter) {
+			throw new InvalidProjectRequestException("At least one search filter is required");
+		}
+
+		List<ProjectDTO> results = hasNameFilter ? service.searchProjects(searchValue) : service.getPublicProjects();
+		if (!hasOwnerFilter) {
+			return results;
+		}
+
+		Set<Long> ownerIds = new LinkedHashSet<>(authServiceClient.searchUserIdsByUsername(ownerUsername));
+		if (ownerIds.isEmpty()) {
+			return List.of();
+		}
+
+		Set<Long> allowedProjectIds = ownerIds.stream()
+				.flatMap(ownerId -> service.getProjectsByOwner(ownerId).stream())
+				.filter(this::isDiscoverableProject)
+				.map(ProjectDTO::getProjectId)
+				.collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+
+		return results.stream()
+				.filter(project -> allowedProjectIds.contains(project.getProjectId()))
+				.toList();
 	}
 
 	@GetMapping("/member/{userId}")
@@ -226,6 +252,10 @@ public class ProjectResource {
 		return isAdmin(authentication)
 				|| project.getOwnerId().equals(currentUserId)
 				|| project.getMemberUserIds().contains(currentUserId);
+	}
+
+	private boolean isDiscoverableProject(ProjectDTO project) {
+		return project.getVisibility() == Visibility.PUBLIC && !project.isArchived();
 	}
 
 	private void assertOwnerOrAdmin(ProjectDTO project, Authentication authentication) {
