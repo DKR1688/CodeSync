@@ -18,12 +18,12 @@ import java.util.Map;
 public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
 	private final AuthService authService;
-	private final String gatewayBaseUrl;
+	private final String frontendBaseUrl;
 
 	public OAuth2LoginSuccessHandler(AuthService authService,
-			@Value("${codesync.gateway-base-url:http://localhost:8080}") String gatewayBaseUrl) {
+			@Value("${codesync.frontend-base-url:http://127.0.0.1:4200}") String frontendBaseUrl) {
 		this.authService = authService;
-		this.gatewayBaseUrl = gatewayBaseUrl;
+		this.frontendBaseUrl = frontendBaseUrl;
 	}
 
 	@Override
@@ -43,8 +43,8 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
 		User user = authService.upsertOAuthUser(email, username, name, provider);
 		String token = authService.issueToken(user);
 
-		String redirectUrl = gatewayBaseUrl + "/login/oauth2/code/" + provider.toLowerCase()
-				+ "?success=true&token=" + token;
+		String redirectUrl = frontendBaseUrl + "/oauth/callback?provider=" + provider.toLowerCase()
+				+ "&success=true&token=" + token;
 		getRedirectStrategy().sendRedirect(request, response, redirectUrl);
 	}
 }

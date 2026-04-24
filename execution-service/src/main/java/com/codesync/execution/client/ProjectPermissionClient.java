@@ -30,7 +30,7 @@ public class ProjectPermissionClient {
 	public ProjectPermissionDTO getPermissions(Long projectId, String authorizationHeader) {
 		try {
 			return requestPermissions(loadBalancedRestClient, projectId, authorizationHeader);
-		} catch (IllegalStateException ex) {
+		} catch (RuntimeException ex) {
 			return requestPermissions(directRestClient, projectId, authorizationHeader);
 		}
 	}

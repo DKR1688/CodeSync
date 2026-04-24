@@ -17,6 +17,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 @RestController
@@ -51,24 +52,46 @@ public class ProjectResource {
 	@GetMapping("/{id}/permissions")
 	public ProjectPermissionDTO getProjectPermissions(@PathVariable Long id, Authentication authentication) {
 		ProjectDTO project = service.getProjectById(id);
-		Long currentUserId = resolveCurrentUserId(authentication);
-		boolean admin = isAdmin(authentication);
-		boolean owner = currentUserId != null && project.getOwnerId().equals(currentUserId);
-		boolean member = currentUserId != null && project.getMemberUserIds().contains(currentUserId);
-		boolean canRead = project.getVisibility() == Visibility.PUBLIC || admin || owner || member;
-		boolean canWrite = !project.isArchived() && (admin || owner || member);
-		boolean canManage = admin || owner;
+		try {
+			Long currentUserId = resolveCurrentUserId(authentication);
+			boolean admin = isAdmin(authentication);
+			Long ownerId = project.getOwnerId();
+			Set<Long> memberUserIds = project.getMemberUserIds() == null
+					? new LinkedHashSet<>()
+					: new LinkedHashSet<>(project.getMemberUserIds());
+			Visibility visibility = project.getVisibility() == null ? Visibility.PRIVATE : project.getVisibility();
+			boolean archived = project.isArchived();
+			boolean owner = currentUserId != null && ownerId != null && ownerId.equals(currentUserId);
+			boolean member = currentUserId != null && memberUserIds.contains(currentUserId);
+			boolean canRead = visibility == Visibility.PUBLIC || admin || owner || member;
+			boolean canWrite = !archived && (admin || owner || member);
+			boolean canManage = admin || owner;
 
-		return new ProjectPermissionDTO(
-				project.getProjectId(),
-				canRead,
-				canWrite,
-				canManage,
-				owner,
-				member,
-				admin,
-				project.isArchived(),
-				project.getVisibility());
+			return new ProjectPermissionDTO(
+					project.getProjectId() != null ? project.getProjectId() : id,
+					canRead,
+					canWrite,
+					canManage,
+					owner,
+					member,
+					admin,
+					archived,
+					visibility);
+		} catch (RuntimeException ex) {
+			if (project.getVisibility() == Visibility.PUBLIC) {
+				return new ProjectPermissionDTO(
+						project.getProjectId() != null ? project.getProjectId() : id,
+						true,
+						false,
+						false,
+						false,
+						false,
+						false,
+						project.isArchived(),
+						project.getVisibility());
+			}
+			throw ex;
+		}
 	}
 
 	@GetMapping("/owner/{ownerId}")
