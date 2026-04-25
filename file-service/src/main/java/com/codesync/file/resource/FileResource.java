@@ -148,7 +148,9 @@ public class FileResource {
 
 	@GetMapping("/project/{projectId}/search")
 	public List<CodeFile> search(@PathVariable Long projectId, @RequestParam String query,
+			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
+		requireCurrentUserId(authentication);
 		verifyReadAccess(projectId, authorizationHeader);
 		return service.searchInProject(projectId, query);
 	}

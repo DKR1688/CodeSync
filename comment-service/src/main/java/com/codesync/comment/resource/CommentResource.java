@@ -52,7 +52,9 @@ public class CommentResource {
 
 	@GetMapping("/{id}")
 	public Comment getById(@PathVariable Long id,
+			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
+		requireCurrentUserId(authentication);
 		Comment comment = service.getCommentById(id);
 		verifyReadAccess(comment.getProjectId(), authorizationHeader);
 		return comment;
@@ -61,7 +63,9 @@ public class CommentResource {
 	@GetMapping("/file/{fileId}")
 	public List<Comment> getByFile(@PathVariable Long fileId,
 			@RequestParam(required = false) Long projectId,
+			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
+		requireCurrentUserId(authentication);
 		List<Comment> comments = service.getByFile(fileId);
 		verifyListReadAccess(comments, projectId, authorizationHeader);
 		return comments;
@@ -69,14 +73,18 @@ public class CommentResource {
 
 	@GetMapping("/project/{projectId}")
 	public List<Comment> getByProject(@PathVariable Long projectId,
+			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
+		requireCurrentUserId(authentication);
 		verifyReadAccess(projectId, authorizationHeader);
 		return service.getByProject(projectId);
 	}
 
 	@GetMapping("/{id}/replies")
 	public List<Comment> getReplies(@PathVariable Long id,
+			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
+		requireCurrentUserId(authentication);
 		Comment comment = service.getCommentById(id);
 		verifyReadAccess(comment.getProjectId(), authorizationHeader);
 		return service.getReplies(id);
@@ -85,7 +93,9 @@ public class CommentResource {
 	@GetMapping("/file/{fileId}/line/{lineNumber}")
 	public List<Comment> getByLine(@PathVariable Long fileId, @PathVariable Integer lineNumber,
 			@RequestParam(required = false) Long projectId,
+			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
+		requireCurrentUserId(authentication);
 		List<Comment> comments = service.getByLine(fileId, lineNumber);
 		verifyListReadAccess(comments, projectId, authorizationHeader);
 		return comments;
@@ -94,7 +104,9 @@ public class CommentResource {
 	@GetMapping("/file/{fileId}/count")
 	public long getCommentCount(@PathVariable Long fileId,
 			@RequestParam(required = false) Long projectId,
+			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
+		requireCurrentUserId(authentication);
 		if (projectId != null) {
 			verifyReadAccess(projectId, authorizationHeader);
 		}
@@ -104,7 +116,9 @@ public class CommentResource {
 	@GetMapping("/resolved")
 	public List<Comment> getByResolved(@RequestParam(required = false) Long projectId,
 			@RequestParam(defaultValue = "false") boolean resolved,
+			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
+		requireCurrentUserId(authentication);
 		if (projectId != null) {
 			verifyReadAccess(projectId, authorizationHeader);
 		}

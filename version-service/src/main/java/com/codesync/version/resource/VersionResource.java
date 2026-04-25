@@ -53,7 +53,9 @@ public class VersionResource {
 
 	@GetMapping("/{snapshotId}")
 	public Snapshot getSnapshotById(@PathVariable Long snapshotId,
+			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
+		requireCurrentUserId(authentication);
 		Snapshot snapshot = service.getSnapshotById(snapshotId);
 		verifyReadAccess(snapshot.getProjectId(), authorizationHeader);
 		return snapshot;
@@ -62,7 +64,9 @@ public class VersionResource {
 	@GetMapping("/file/{fileId}")
 	public List<Snapshot> getSnapshotsByFile(@PathVariable Long fileId,
 			@RequestParam(required = false) Long projectId,
+			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
+		requireCurrentUserId(authentication);
 		List<Snapshot> snapshots = service.getSnapshotsByFile(fileId);
 		verifyListReadAccess(snapshots, projectId, authorizationHeader);
 		return snapshots;
@@ -70,14 +74,18 @@ public class VersionResource {
 
 	@GetMapping("/project/{projectId}")
 	public List<Snapshot> getSnapshotsByProject(@PathVariable Long projectId,
+			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
+		requireCurrentUserId(authentication);
 		verifyReadAccess(projectId, authorizationHeader);
 		return service.getSnapshotsByProject(projectId);
 	}
 
 	@GetMapping("/project/{projectId}/branch/{branch}")
 	public List<Snapshot> getSnapshotsByBranch(@PathVariable Long projectId, @PathVariable String branch,
+			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
+		requireCurrentUserId(authentication);
 		verifyReadAccess(projectId, authorizationHeader);
 		return service.getSnapshotsByBranch(projectId, branch);
 	}
@@ -85,7 +93,9 @@ public class VersionResource {
 	@GetMapping("/file/{fileId}/latest")
 	public Snapshot getLatestSnapshot(@PathVariable Long fileId,
 			@RequestParam(required = false) String branch,
+			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
+		requireCurrentUserId(authentication);
 		Snapshot snapshot = service.getLatestSnapshot(fileId, branch);
 		verifyReadAccess(snapshot.getProjectId(), authorizationHeader);
 		return snapshot;
@@ -94,7 +104,9 @@ public class VersionResource {
 	@GetMapping("/file/{fileId}/history")
 	public List<Snapshot> getFileHistory(@PathVariable Long fileId,
 			@RequestParam(required = false) Long projectId,
+			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
+		requireCurrentUserId(authentication);
 		List<Snapshot> snapshots = service.getFileHistory(fileId);
 		verifyListReadAccess(snapshots, projectId, authorizationHeader);
 		return snapshots;
@@ -102,7 +114,9 @@ public class VersionResource {
 
 	@GetMapping("/diff")
 	public DiffResponse diffSnapshots(@RequestParam Long fromSnapshotId, @RequestParam Long toSnapshotId,
+			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
+		requireCurrentUserId(authentication);
 		Snapshot from = service.getSnapshotById(fromSnapshotId);
 		Snapshot to = service.getSnapshotById(toSnapshotId);
 		if (!from.getProjectId().equals(to.getProjectId())) {
@@ -134,7 +148,9 @@ public class VersionResource {
 
 	@PostMapping("/{snapshotId}/tag")
 	public Snapshot tagSnapshot(@PathVariable Long snapshotId, @Valid @RequestBody TagSnapshotRequest request,
+			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
+		requireCurrentUserId(authentication);
 		Snapshot snapshot = service.getSnapshotById(snapshotId);
 		verifyWriteAccess(snapshot.getProjectId(), authorizationHeader);
 		return service.tagSnapshot(snapshotId, request.getTag());

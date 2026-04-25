@@ -99,7 +99,9 @@ public class ExecutionResource {
 
 	@GetMapping("/projects/{projectId}")
 	public List<ExecutionJob> getExecutionsByProject(@PathVariable Long projectId,
+			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
+		requireCurrentUser(authentication);
 		verifyReadAccess(projectId, authorizationHeader);
 		return executionService.getExecutionsByProject(projectId);
 	}

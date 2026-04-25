@@ -34,7 +34,8 @@ public interface CollabService {
 	CollabSessionDTO broadcastChange(String sessionId, BroadcastChangeRequest request, Long actorUserId,
 			String authorizationHeader);
 
-	void kickParticipant(String sessionId, Long targetUserId, Long actorUserId, boolean admin);
+	void kickParticipant(String sessionId, Long targetUserId, Long actorUserId, boolean admin,
+			String authorizationHeader);
 
 	void cleanUpInactiveSessions();
 }

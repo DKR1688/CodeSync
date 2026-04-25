@@ -28,7 +28,7 @@ public class SupportedLanguageSeeder implements ApplicationRunner {
 	private List<SupportedLanguage> defaultLanguages() {
 		return List.of(
 				language("python", "Python", "3.12", "python:3.12-alpine", "main.py", "python3 main.py"),
-				language("java", "Java", "21", "eclipse-temurin:21-jdk-alpine", "Main.java",
+				language("java", "Java", "21", "eclipse-temurin:21-jdk", "Main.java",
 						"javac Main.java && java Main"),
 				language("javascript", "JavaScript (Node.js)", "22", "node:22-alpine", "main.js", "node main.js"),
 				language("c", "C", "GCC latest", "gcc:latest", "main.c", "gcc main.c -O2 -o main && ./main"),

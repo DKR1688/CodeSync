@@ -269,11 +269,12 @@ class CollabServiceImplTest {
 		CollabSession session = activeSession();
 
 		when(sessionRepository.findById(session.getSessionId())).thenReturn(Optional.of(session));
+		when(projectPermissionClient.getPermissions(10L, "Bearer token")).thenReturn(writablePermissions);
 		when(participantRepository.findBySessionSessionIdAndUserIdAndLeftAtIsNull(session.getSessionId(), 88L))
 				.thenReturn(Optional.empty());
 
 		AccessDeniedException ex = assertThrows(AccessDeniedException.class,
-				() -> service.kickParticipant(session.getSessionId(), 88L, 10L, false));
+				() -> service.kickParticipant(session.getSessionId(), 88L, 10L, false, "Bearer token"));
 
 		assertEquals("The target user is not an active participant in this session", ex.getMessage());
 	}

@@ -52,19 +52,25 @@ public class CollabResource {
 
 	@GetMapping("/{sessionId}")
 	public CollabSessionDTO getSessionById(@PathVariable String sessionId,
+			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
+		requireCurrentUserId(authentication);
 		return service.getSessionById(sessionId, authorizationHeader);
 	}
 
 	@GetMapping("/project/{projectId}")
 	public List<CollabSessionDTO> getSessionsByProject(@PathVariable Long projectId,
+			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
+		requireCurrentUserId(authentication);
 		return service.getSessionsByProject(projectId, authorizationHeader);
 	}
 
 	@GetMapping("/file/{fileId}/active")
 	public CollabSessionDTO getActiveSessionForFile(@PathVariable Long fileId,
+			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
+		requireCurrentUserId(authentication);
 		return service.getActiveSessionForFile(fileId, authorizationHeader);
 	}
 
@@ -92,7 +98,9 @@ public class CollabResource {
 
 	@GetMapping("/{sessionId}/participants")
 	public List<ParticipantDTO> getParticipants(@PathVariable String sessionId,
+			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
+		requireCurrentUserId(authentication);
 		return service.getParticipants(sessionId, authorizationHeader);
 	}
 
@@ -113,8 +121,10 @@ public class CollabResource {
 
 	@PostMapping("/{sessionId}/participants/{userId}/kick")
 	public ResponseEntity<Void> kickParticipant(@PathVariable String sessionId, @PathVariable Long userId,
-			Authentication authentication) {
-		service.kickParticipant(sessionId, userId, requireCurrentUserId(authentication), isAdmin(authentication));
+			Authentication authentication,
+			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
+		service.kickParticipant(sessionId, userId, requireCurrentUserId(authentication), isAdmin(authentication),
+				authorizationHeader);
 		return ResponseEntity.noContent().build();
 	}
 

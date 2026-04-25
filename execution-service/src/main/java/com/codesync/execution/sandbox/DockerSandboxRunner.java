@@ -22,6 +22,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Component
@@ -38,13 +39,20 @@ public class DockerSandboxRunner implements SandboxRunner {
 
 	@Override
 	public SandboxExecutionResult run(ExecutionJob job, SupportedLanguage language, Consumer<String> stdoutConsumer) {
-		long started = System.nanoTime();
 		if (!dockerEnabled) {
 			return new SandboxExecutionResult(ExecutionStatus.FAILED, "",
 					"Docker sandbox execution is disabled in this environment.", null,
-					elapsedMillis(started), 0);
+					0, 0);
 		}
 
+		String imagePreparationError = ensureImageAvailable(language.getDockerImage());
+		if (imagePreparationError != null) {
+			return new SandboxExecutionResult(ExecutionStatus.FAILED, "",
+					"Unable to prepare Docker image " + language.getDockerImage() + ": " + imagePreparationError,
+					null, 0, 0);
+		}
+
+		long started = System.nanoTime();
 		Path workDir = null;
 		ExecutorService streamExecutor = Executors.newFixedThreadPool(2);
 		try {
@@ -95,6 +103,42 @@ public class DockerSandboxRunner implements SandboxRunner {
 			streamExecutor.shutdownNow();
 			processManager.complete(job.getJobId());
 			deleteDirectory(workDir);
+		}
+	}
+
+	private String ensureImageAvailable(String dockerImage) {
+		try {
+			Process inspect = new ProcessBuilder("docker", "image", "inspect", dockerImage)
+					.redirectErrorStream(true)
+					.start();
+			if (!inspect.waitFor(30, TimeUnit.SECONDS)) {
+				inspect.destroyForcibly();
+				return "timed out while checking whether the image is already available.";
+			}
+
+			if (inspect.exitValue() == 0) {
+				return null;
+			}
+
+			Process pull = new ProcessBuilder("docker", "pull", dockerImage)
+					.redirectErrorStream(true)
+					.start();
+			if (!pull.waitFor(10, TimeUnit.MINUTES)) {
+				pull.destroyForcibly();
+				return "timed out while downloading the Docker image.";
+			}
+
+			if (pull.exitValue() != 0) {
+				String pullOutput = readProcessOutput(pull);
+				return pullOutput.isBlank() ? "docker pull exited with a non-zero status." : pullOutput;
+			}
+
+			return null;
+		} catch (IOException ex) {
+			return ex.getMessage();
+		} catch (InterruptedException ex) {
+			Thread.currentThread().interrupt();
+			return "image preparation was interrupted.";
 		}
 	}
 
@@ -168,6 +212,14 @@ public class DockerSandboxRunner implements SandboxRunner {
 	private String appendLine(String value, String line) {
 		String base = value == null ? "" : value;
 		return base + line + System.lineSeparator();
+	}
+
+	private String readProcessOutput(Process process) {
+		try (BufferedReader reader = process.inputReader(StandardCharsets.UTF_8)) {
+			return reader.lines().collect(Collectors.joining(System.lineSeparator()));
+		} catch (IOException ex) {
+			return "";
+		}
 	}
 
 	private long elapsedMillis(long startedNanos) {

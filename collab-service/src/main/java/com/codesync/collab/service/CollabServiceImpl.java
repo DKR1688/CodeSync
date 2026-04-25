@@ -216,7 +216,9 @@ public class CollabServiceImpl implements CollabService {
 	public void endSession(String sessionId, Long actorUserId, boolean admin, String authorizationHeader) {
 		validatePositiveId(actorUserId, "Actor user id");
 		CollabSession session = requireActiveSession(sessionId);
-		if (!admin && !session.getOwnerId().equals(actorUserId)) {
+		ProjectPermissionDTO permissions = requirePermissions(session.getProjectId(), authorizationHeader);
+		boolean canManageSession = admin || permissions.isCanManage() || session.getOwnerId().equals(actorUserId);
+		if (!canManageSession) {
 			throw new AccessDeniedException("Only the session owner or an admin can end this session");
 		}
 		if (StringUtils.hasText(authorizationHeader)) {
@@ -296,15 +298,18 @@ public class CollabServiceImpl implements CollabService {
 	}
 
 	@Override
-	public void kickParticipant(String sessionId, Long targetUserId, Long actorUserId, boolean admin) {
+	public void kickParticipant(String sessionId, Long targetUserId, Long actorUserId, boolean admin,
+			String authorizationHeader) {
 		validatePositiveId(targetUserId, "Target user id");
 		validatePositiveId(actorUserId, "Actor user id");
 		CollabSession session = requireActiveSession(sessionId);
-		if (!admin && !session.getOwnerId().equals(actorUserId)) {
+		ProjectPermissionDTO permissions = requirePermissions(session.getProjectId(), authorizationHeader);
+		boolean canManageSession = admin || permissions.isCanManage() || session.getOwnerId().equals(actorUserId);
+		if (!canManageSession) {
 			throw new AccessDeniedException("Only the session owner or an admin can remove participants");
 		}
 		if (session.getOwnerId().equals(targetUserId)) {
-			if (!admin) {
+			if (!admin && !permissions.isCanManage()) {
 				throw new InvalidCollabRequestException("The session owner cannot be kicked from the session");
 			}
 			endSessionInternal(session, actorUserId, "SESSION_ENDED", Map.of("reason", "Ended by administrator"));
