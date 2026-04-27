@@ -67,11 +67,12 @@ public class CollabResource {
 	}
 
 	@GetMapping("/file/{fileId}/active")
-	public CollabSessionDTO getActiveSessionForFile(@PathVariable Long fileId,
+	public ResponseEntity<CollabSessionDTO> getActiveSessionForFile(@PathVariable Long fileId,
 			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
 		requireCurrentUserId(authentication);
-		return service.getActiveSessionForFile(fileId, authorizationHeader);
+		CollabSessionDTO session = service.getActiveSessionForFile(fileId, authorizationHeader);
+		return session != null ? ResponseEntity.ok(session) : ResponseEntity.noContent().build();
 	}
 
 	@PostMapping("/{sessionId}/join")

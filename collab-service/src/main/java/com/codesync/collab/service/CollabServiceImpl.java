@@ -154,10 +154,11 @@ public class CollabServiceImpl implements CollabService {
 	@Transactional(readOnly = true)
 	public CollabSessionDTO getActiveSessionForFile(Long fileId, String authorizationHeader) {
 		validatePositiveId(fileId, "File id");
-		CollabSession session = sessionRepository.findFirstByFileIdAndStatusOrderByCreatedAtDesc(fileId, SessionStatus.ACTIVE)
-				.orElseThrow(() -> new ResourceNotFoundException("No active session found for file id " + fileId));
-		assertCanReadProject(session.getProjectId(), authorizationHeader);
-		return toSessionDTO(session);
+		CodeFileDTO file = fileServiceClient.getFileById(fileId, authorizationHeader);
+		assertCanReadProject(file.getProjectId(), authorizationHeader);
+		return sessionRepository.findFirstByFileIdAndStatusOrderByCreatedAtDesc(fileId, SessionStatus.ACTIVE)
+				.map(this::toSessionDTO)
+				.orElse(null);
 	}
 
 	@Override
