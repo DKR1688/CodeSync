@@ -65,11 +65,11 @@ class VersionServiceImplTest {
 		Snapshot source = versionService.createSnapshot(request("first", "content", null), 99L);
 		CreateBranchRequest request = new CreateBranchRequest();
 		request.setSourceSnapshotId(source.getSnapshotId());
-		request.setBranch("feature-one");
+		request.setBranch("feature/one");
 
 		Snapshot branchHead = versionService.createBranch(request, 100L);
 
-		assertThat(branchHead.getBranch()).isEqualTo("feature-one");
+		assertThat(branchHead.getBranch()).isEqualTo("feature/one");
 		assertThat(branchHead.getParentSnapshotId()).isEqualTo(source.getSnapshotId());
 		assertThat(branchHead.getContent()).isEqualTo(source.getContent());
 	}

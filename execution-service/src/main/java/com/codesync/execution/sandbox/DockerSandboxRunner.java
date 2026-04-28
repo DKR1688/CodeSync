@@ -179,12 +179,23 @@ public class DockerSandboxRunner implements SandboxRunner {
 
 	private void writeStdin(Process process, String stdin) {
 		try (OutputStream outputStream = process.getOutputStream()) {
-			if (stdin != null && !stdin.isEmpty()) {
-				outputStream.write(stdin.getBytes(StandardCharsets.UTF_8));
+			String normalizedStdin = normalizeStdin(stdin);
+			if (!normalizedStdin.isEmpty()) {
+				outputStream.write(normalizedStdin.getBytes(StandardCharsets.UTF_8));
 			}
 		} catch (IOException ignored) {
 			// The process may exit before consuming stdin; stdout/stderr still explain the result.
 		}
+	}
+
+	static String normalizeStdin(String stdin) {
+		if (stdin == null || stdin.isEmpty()) {
+			return "";
+		}
+		if (stdin.endsWith("\n") || stdin.endsWith("\r")) {
+			return stdin;
+		}
+		return stdin + System.lineSeparator();
 	}
 
 	private Callable<String> capture(BufferedReader reader, Consumer<String> streamConsumer) {

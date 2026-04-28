@@ -53,7 +53,7 @@ class SupportedLanguageSeederTest {
 		assertThat(seeded)
 				.allSatisfy(language -> {
 					assertThat(language.isEnabled()).isTrue();
-					assertThat(language.getDefaultTimeLimitSeconds()).isEqualTo(10);
+					assertThat(language.getDefaultTimeLimitSeconds()).isEqualTo(20);
 					assertThat(language.getDefaultMemoryLimitMb()).isEqualTo(256);
 				});
 	}

@@ -9,6 +9,7 @@ import com.codesync.version.dto.RestoreSnapshotRequest;
 import com.codesync.version.dto.TagSnapshotRequest;
 import com.codesync.version.entity.Snapshot;
 import com.codesync.version.exception.InvalidVersionRequestException;
+import com.codesync.version.exception.ResourceNotFoundException;
 import com.codesync.version.security.AuthenticatedUser;
 import com.codesync.version.service.VersionService;
 import jakarta.validation.Valid;
@@ -91,14 +92,19 @@ public class VersionResource {
 	}
 
 	@GetMapping("/file/{fileId}/latest")
-	public Snapshot getLatestSnapshot(@PathVariable Long fileId,
+	public ResponseEntity<Snapshot> getLatestSnapshot(@PathVariable Long fileId,
 			@RequestParam(required = false) String branch,
 			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
 		requireCurrentUserId(authentication);
-		Snapshot snapshot = service.getLatestSnapshot(fileId, branch);
+		Snapshot snapshot;
+		try {
+			snapshot = service.getLatestSnapshot(fileId, branch);
+		} catch (ResourceNotFoundException exception) {
+			return ResponseEntity.noContent().build();
+		}
 		verifyReadAccess(snapshot.getProjectId(), authorizationHeader);
-		return snapshot;
+		return ResponseEntity.ok(snapshot);
 	}
 
 	@GetMapping("/file/{fileId}/history")

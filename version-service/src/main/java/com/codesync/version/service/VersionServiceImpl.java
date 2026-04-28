@@ -291,8 +291,9 @@ public class VersionServiceImpl implements VersionService {
 
 	private String normalizeRequiredBranch(String branch) {
 		String normalized = normalizeReference(branch, "Branch");
-		if (!normalized.matches("[A-Za-z0-9._-]+")) {
-			throw new InvalidVersionRequestException("Branch can only contain letters, numbers, dots, dashes, and underscores");
+		if (!normalized.matches("[A-Za-z0-9._/-]+")) {
+			throw new InvalidVersionRequestException(
+					"Branch can only contain letters, numbers, slashes, dots, dashes, and underscores");
 		}
 		return normalized;
 	}

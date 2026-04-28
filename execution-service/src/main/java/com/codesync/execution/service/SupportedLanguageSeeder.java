@@ -55,7 +55,7 @@ public class SupportedLanguageSeeder implements ApplicationRunner {
 		language.setSourceFileName(sourceFileName);
 		language.setRunCommand(runCommand);
 		language.setEnabled(true);
-		language.setDefaultTimeLimitSeconds(10);
+		language.setDefaultTimeLimitSeconds(20);
 		language.setDefaultMemoryLimitMb(256);
 		return language;
 	}
