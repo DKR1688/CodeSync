@@ -8,6 +8,7 @@ import com.codesync.collab.dto.JoinSessionRequest;
 import com.codesync.collab.dto.ParticipantDTO;
 import com.codesync.collab.security.AuthenticatedUser;
 import com.codesync.collab.service.CollabService;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -37,6 +38,7 @@ public class CollabResource {
 	}
 
 	@PostMapping
+	@Operation(summary = "Create session", tags = { "01. Create Session" })
 	public ResponseEntity<CollabSessionDTO> createSession(@Valid @RequestBody CreateSessionRequest request,
 			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
@@ -45,12 +47,14 @@ public class CollabResource {
 	}
 
 	@GetMapping("/active")
+	@Operation(summary = "Active sessions", tags = { "12. List Active Sessions" })
 	public List<CollabSessionDTO> getActiveSessions(Authentication authentication) {
 		assertAdmin(authentication);
 		return service.getActiveSessions();
 	}
 
 	@GetMapping("/{sessionId}")
+	@Operation(summary = "Session by id", tags = { "02. Get Session By Id" })
 	public CollabSessionDTO getSessionById(@PathVariable String sessionId,
 			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
@@ -59,6 +63,7 @@ public class CollabResource {
 	}
 
 	@GetMapping("/project/{projectId}")
+	@Operation(summary = "Sessions by project", tags = { "03. Get Sessions By Project" })
 	public List<CollabSessionDTO> getSessionsByProject(@PathVariable Long projectId,
 			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
@@ -67,6 +72,7 @@ public class CollabResource {
 	}
 
 	@GetMapping("/file/{fileId}/active")
+	@Operation(summary = "Active session by file", tags = { "04. Get Active Session For File" })
 	public ResponseEntity<CollabSessionDTO> getActiveSessionForFile(@PathVariable Long fileId,
 			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
@@ -76,6 +82,7 @@ public class CollabResource {
 	}
 
 	@PostMapping("/{sessionId}/join")
+	@Operation(summary = "Join session", tags = { "05. Join Session" })
 	public ParticipantDTO joinSession(@PathVariable String sessionId,
 			@RequestBody(required = false) JoinSessionRequest request,
 			Authentication authentication,
@@ -84,12 +91,14 @@ public class CollabResource {
 	}
 
 	@PostMapping("/{sessionId}/leave")
+	@Operation(summary = "Leave session", tags = { "09. Leave Session" })
 	public ResponseEntity<Void> leaveSession(@PathVariable String sessionId, Authentication authentication) {
 		service.leaveSession(sessionId, requireCurrentUserId(authentication));
 		return ResponseEntity.noContent().build();
 	}
 
 	@PostMapping("/{sessionId}/end")
+	@Operation(summary = "End session", tags = { "11. End Session" })
 	public ResponseEntity<Void> endSession(@PathVariable String sessionId,
 			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
@@ -98,6 +107,7 @@ public class CollabResource {
 	}
 
 	@GetMapping("/{sessionId}/participants")
+	@Operation(summary = "Participants", tags = { "06. Get Participants" })
 	public List<ParticipantDTO> getParticipants(@PathVariable String sessionId,
 			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
@@ -106,6 +116,7 @@ public class CollabResource {
 	}
 
 	@PutMapping("/{sessionId}/cursor")
+	@Operation(summary = "Update cursor", tags = { "07. Update Cursor" })
 	public ParticipantDTO updateCursor(@PathVariable String sessionId,
 			@Valid @RequestBody CursorUpdateRequest request,
 			Authentication authentication) {
@@ -113,6 +124,7 @@ public class CollabResource {
 	}
 
 	@PutMapping("/{sessionId}/content")
+	@Operation(summary = "Broadcast change", tags = { "08. Broadcast Content Change" })
 	public CollabSessionDTO broadcastChange(@PathVariable String sessionId,
 			@Valid @RequestBody BroadcastChangeRequest request,
 			Authentication authentication,
@@ -121,6 +133,7 @@ public class CollabResource {
 	}
 
 	@PostMapping("/{sessionId}/participants/{userId}/kick")
+	@Operation(summary = "Kick participant", tags = { "10. Kick Participant" })
 	public ResponseEntity<Void> kickParticipant(@PathVariable String sessionId, @PathVariable Long userId,
 			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {

@@ -8,6 +8,7 @@ import com.codesync.project.enums.Visibility;
 import com.codesync.project.exception.InvalidProjectRequestException;
 import com.codesync.project.security.AuthenticatedUser;
 import com.codesync.project.service.ProjectService;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -38,12 +39,14 @@ public class ProjectResource {
 	}
 
 	@PostMapping
+	@Operation(summary = "Create project", tags = { "01. Create Project" })
 	public ResponseEntity<ProjectDTO> createProject(@Valid @RequestBody ProjectDTO dto, Authentication authentication) {
 		dto.setOwnerId(requireCurrentUserId(authentication));
 		return ResponseEntity.status(HttpStatus.CREATED).body(service.createProject(dto));
 	}
 
 	@GetMapping("/{id}")
+	@Operation(summary = "Project by id", tags = { "02. Get Project By Id" })
 	public ProjectDTO getProjectById(@PathVariable Long id, Authentication authentication) {
 		ProjectDTO project = service.getProjectById(id);
 		assertCanViewProject(project, authentication);
@@ -51,6 +54,7 @@ public class ProjectResource {
 	}
 
 	@GetMapping("/{id}/permissions")
+	@Operation(summary = "Project permissions", tags = { "03. Get Project Permissions" })
 	public ProjectPermissionDTO getProjectPermissions(@PathVariable Long id, Authentication authentication) {
 		ProjectDTO project = service.getProjectById(id);
 		try {
@@ -96,6 +100,7 @@ public class ProjectResource {
 	}
 
 	@GetMapping("/owner/{ownerId}")
+	@Operation(summary = "Projects by owner", tags = { "07. Get Projects By Owner" })
 	public List<ProjectDTO> getProjectsByOwner(@PathVariable Long ownerId, Authentication authentication) {
 		return service.getProjectsByOwner(ownerId).stream()
 				.filter(project -> canViewProject(project, authentication))
@@ -103,11 +108,13 @@ public class ProjectResource {
 	}
 
 	@GetMapping("/public")
+	@Operation(summary = "Public projects", tags = { "04. Get Public Projects" })
 	public List<ProjectDTO> getPublicProjects() {
 		return service.getPublicProjects();
 	}
 
 	@GetMapping("/admin/all")
+	@Operation(summary = "All projects", tags = { "17. Get All Projects" })
 	public List<ProjectDTO> getAllProjects(Authentication authentication) {
 		if (!isAdmin(authentication)) {
 			throw new AccessDeniedException("Administrator access is required");
@@ -116,6 +123,7 @@ public class ProjectResource {
 	}
 
 	@GetMapping("/search")
+	@Operation(summary = "Search projects", tags = { "05. Search Projects" })
 	public List<ProjectDTO> searchProjects(@RequestParam(required = false) String name,
 			@RequestParam(required = false) String keyword,
 			@RequestParam(required = false) String ownerUsername) {
@@ -148,17 +156,20 @@ public class ProjectResource {
 	}
 
 	@GetMapping("/member/{userId}")
+	@Operation(summary = "Projects by member", tags = { "08. Get Projects By Member" })
 	public List<ProjectDTO> getProjectsByMember(@PathVariable Long userId, Authentication authentication) {
 		assertSameUserOrAdmin(userId, authentication);
 		return service.getProjectsByMember(userId);
 	}
 
 	@GetMapping("/language/{lang}")
+	@Operation(summary = "Projects by language", tags = { "06. Get Projects By Language" })
 	public List<ProjectDTO> getProjectsByLanguage(@PathVariable String lang) {
 		return service.getProjectsByLanguage(lang);
 	}
 
 	@GetMapping("/{id}/members")
+	@Operation(summary = "Project members", tags = { "09. Get Project Members" })
 	public Set<Long> getProjectMembers(@PathVariable Long id, Authentication authentication) {
 		ProjectDTO project = service.getProjectById(id);
 		assertCanViewProject(project, authentication);
@@ -166,6 +177,7 @@ public class ProjectResource {
 	}
 
 	@PutMapping("/{id}")
+	@Operation(summary = "Update project", tags = { "10. Update Project" })
 	public ProjectDTO updateProject(@PathVariable Long id, @Valid @RequestBody ProjectDTO dto,
 			Authentication authentication) {
 		ProjectDTO existingProject = service.getProjectById(id);
@@ -175,6 +187,7 @@ public class ProjectResource {
 	}
 
 	@PutMapping("/{id}/archive")
+	@Operation(summary = "Archive project", tags = { "15. Archive Project" })
 	public ResponseEntity<Void> archiveProject(@PathVariable Long id, Authentication authentication) {
 		assertOwnerOrAdmin(service.getProjectById(id), authentication);
 		service.archiveProject(id);
@@ -182,6 +195,7 @@ public class ProjectResource {
 	}
 
 	@PutMapping("/{id}/star")
+	@Operation(summary = "Star project", tags = { "13. Star Project" })
 	public ResponseEntity<Void> starProject(@PathVariable Long id, Authentication authentication) {
 		ProjectDTO project = service.getProjectById(id);
 		assertCanViewProject(project, authentication);
@@ -191,6 +205,7 @@ public class ProjectResource {
 	}
 
 	@PostMapping("/{id}/fork/{userId}")
+	@Operation(summary = "Fork project", tags = { "14. Fork Project" })
 	public ResponseEntity<ProjectDTO> forkProject(@PathVariable Long id, @PathVariable Long userId,
 			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
@@ -213,6 +228,7 @@ public class ProjectResource {
 	}
 
 	@PostMapping("/{id}/members/{userId}")
+	@Operation(summary = "Add member", tags = { "11. Add Member" })
 	public ResponseEntity<Void> addMember(@PathVariable Long id, @PathVariable Long userId, Authentication authentication) {
 		assertOwnerOrAdmin(service.getProjectById(id), authentication);
 		authServiceClient.assertUserExists(userId);
@@ -221,6 +237,7 @@ public class ProjectResource {
 	}
 
 	@DeleteMapping("/{id}/members/{userId}")
+	@Operation(summary = "Remove member", tags = { "12. Remove Member" })
 	public ResponseEntity<Void> removeMember(@PathVariable Long id, @PathVariable Long userId,
 			Authentication authentication) {
 		assertOwnerOrAdmin(service.getProjectById(id), authentication);
@@ -229,6 +246,7 @@ public class ProjectResource {
 	}
 
 	@DeleteMapping("/{id}")
+	@Operation(summary = "Delete project", tags = { "16. Delete Project" })
 	public ResponseEntity<Void> deleteProject(@PathVariable Long id, Authentication authentication) {
 		assertOwnerOrAdmin(service.getProjectById(id), authentication);
 		service.deleteProject(id);

@@ -12,6 +12,7 @@ import com.codesync.execution.enums.ExecutionStatus;
 import com.codesync.execution.exception.InvalidExecutionRequestException;
 import com.codesync.execution.security.AuthenticatedUser;
 import com.codesync.execution.service.ExecutionService;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -49,6 +50,7 @@ public class ExecutionResource {
 	}
 
 	@PostMapping
+	@Operation(summary = "Submit execution", tags = { "06. Submit Execution" })
 	public ResponseEntity<ExecutionJob> submitExecution(@Valid @RequestBody SubmitExecutionRequest request,
 			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
@@ -58,6 +60,7 @@ public class ExecutionResource {
 	}
 
 	@GetMapping("/{jobId}")
+	@Operation(summary = "Job by id", tags = { "07. Get Job" })
 	public ExecutionJob getJob(@PathVariable UUID jobId, Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
 		ExecutionJob job = executionService.getJobById(jobId);
@@ -66,6 +69,7 @@ public class ExecutionResource {
 	}
 
 	@GetMapping("/{jobId}/result")
+	@Operation(summary = "Result", tags = { "08. Get Result" })
 	public ExecutionResultDTO getExecutionResult(@PathVariable UUID jobId, Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
 		ExecutionJob job = executionService.getJobById(jobId);
@@ -74,6 +78,7 @@ public class ExecutionResource {
 	}
 
 	@PostMapping("/{jobId}/cancel")
+	@Operation(summary = "Cancel execution", tags = { "09. Cancel Execution" })
 	public ExecutionJob cancelExecution(@PathVariable UUID jobId, Authentication authentication) {
 		ExecutionJob job = executionService.getJobById(jobId);
 		AuthenticatedUser user = requireCurrentUser(authentication);
@@ -84,11 +89,13 @@ public class ExecutionResource {
 	}
 
 	@GetMapping("/me")
+	@Operation(summary = "My executions", tags = { "10. Get My Executions" })
 	public List<ExecutionJob> getMyExecutions(Authentication authentication) {
 		return executionService.getExecutionsByUser(requireCurrentUserId(authentication));
 	}
 
 	@GetMapping("/users/{userId}")
+	@Operation(summary = "By user", tags = { "11. Get By User" })
 	public List<ExecutionJob> getExecutionsByUser(@PathVariable Long userId, Authentication authentication) {
 		AuthenticatedUser currentUser = requireCurrentUser(authentication);
 		if (!currentUser.isAdmin() && !userId.equals(currentUser.userId())) {
@@ -98,6 +105,7 @@ public class ExecutionResource {
 	}
 
 	@GetMapping("/projects/{projectId}")
+	@Operation(summary = "By project", tags = { "12. Get By Project" })
 	public List<ExecutionJob> getExecutionsByProject(@PathVariable Long projectId,
 			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
@@ -107,6 +115,7 @@ public class ExecutionResource {
 	}
 
 	@GetMapping("/languages")
+	@Operation(summary = "Languages", tags = { "01. List Languages" })
 	public List<SupportedLanguage> getSupportedLanguages(
 			@RequestParam(name = "includeDisabled", defaultValue = "false") boolean includeDisabled,
 			Authentication authentication) {
@@ -121,12 +130,14 @@ public class ExecutionResource {
 	}
 
 	@GetMapping("/languages/{language}/version")
+	@Operation(summary = "Language version", tags = { "02. Get Language Version" })
 	public String getLanguageVersion(@PathVariable String language) {
 		return executionService.getLanguageVersion(language);
 	}
 
 	@GetMapping("/admin/jobs")
 	@PreAuthorize("hasRole('ADMIN')")
+	@Operation(summary = "All jobs", tags = { "13. List All Jobs" })
 	public List<ExecutionJob> getAllJobs(@RequestParam(required = false) ExecutionStatus status,
 			@RequestParam(required = false) String language,
 			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
@@ -145,18 +156,21 @@ public class ExecutionResource {
 
 	@GetMapping("/admin/stats")
 	@PreAuthorize("hasRole('ADMIN')")
+	@Operation(summary = "Stats", tags = { "14. Get Stats" })
 	public ExecutionStatsDTO getExecutionStats() {
 		return executionService.getExecutionStats();
 	}
 
 	@PostMapping("/languages")
 	@PreAuthorize("hasRole('ADMIN')")
+	@Operation(summary = "Create language", tags = { "03. Create Language" })
 	public ResponseEntity<SupportedLanguage> createLanguage(@Valid @RequestBody LanguageRequest request) {
 		return ResponseEntity.status(HttpStatus.CREATED).body(executionService.saveLanguage(request));
 	}
 
 	@PutMapping("/languages/{language}")
 	@PreAuthorize("hasRole('ADMIN')")
+	@Operation(summary = "Update language", tags = { "04. Update Language" })
 	public SupportedLanguage updateLanguage(@PathVariable String language, @Valid @RequestBody LanguageRequest request) {
 		if (!language.equalsIgnoreCase(request.getLanguage())) {
 			throw new InvalidExecutionRequestException("Path language must match payload language");
@@ -166,6 +180,7 @@ public class ExecutionResource {
 
 	@PatchMapping("/languages/{language}/enabled")
 	@PreAuthorize("hasRole('ADMIN')")
+	@Operation(summary = "Set enabled", tags = { "05. Set Language Enabled" })
 	public SupportedLanguage setLanguageEnabled(@PathVariable String language, @RequestParam boolean enabled) {
 		return executionService.setLanguageEnabled(language, enabled);
 	}

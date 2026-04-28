@@ -12,6 +12,7 @@ import com.codesync.file.entity.CodeFile;
 import com.codesync.file.exception.InvalidFileRequestException;
 import com.codesync.file.security.AuthenticatedUser;
 import com.codesync.file.service.FileService;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -44,6 +45,7 @@ public class FileResource {
 	}
 
 	@PostMapping
+	@Operation(summary = "Create file", tags = { "02. Create File" })
 	public ResponseEntity<CodeFile> create(@RequestBody CodeFile file, Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
 		verifyWriteAccess(file.getProjectId(), authorizationHeader);
@@ -54,6 +56,7 @@ public class FileResource {
 	}
 
 	@PostMapping("/folders")
+	@Operation(summary = "Create folder", tags = { "01. Create Folder" })
 	public ResponseEntity<CodeFile> createFolder(@Valid @RequestBody CreateFolderRequest request,
 			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
@@ -63,6 +66,7 @@ public class FileResource {
 	}
 
 	@PostMapping("/projects/copy")
+	@Operation(summary = "Copy project files", tags = { "13. Copy Project Files" })
 	public ResponseEntity<Void> copyProjectFiles(@Valid @RequestBody CopyProjectFilesRequest request,
 			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
@@ -74,6 +78,7 @@ public class FileResource {
 	}
 
 	@GetMapping("/{id}")
+	@Operation(summary = "File by id", tags = { "03. Get File By Id" })
 	public CodeFile getById(@PathVariable Long id,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
 		CodeFile file = service.getFileById(id);
@@ -82,6 +87,7 @@ public class FileResource {
 	}
 
 	@GetMapping("/project/{projectId}")
+	@Operation(summary = "Files by project", tags = { "04. Get Files By Project" })
 	public List<CodeFile> getByProject(@PathVariable Long projectId,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
 		verifyReadAccess(projectId, authorizationHeader);
@@ -89,6 +95,7 @@ public class FileResource {
 	}
 
 	@GetMapping("/{id}/content")
+	@Operation(summary = "File content", tags = { "05. Get File Content" })
 	public String getContent(@PathVariable Long id,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
 		CodeFile file = service.getFileById(id);
@@ -97,6 +104,7 @@ public class FileResource {
 	}
 
 	@PutMapping("/{id}/content")
+	@Operation(summary = "Update content", tags = { "06. Update File Content" })
 	public CodeFile updateContent(@PathVariable Long id, @RequestBody FileContentUpdateRequest request,
 			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
@@ -106,6 +114,7 @@ public class FileResource {
 	}
 
 	@PutMapping("/{id}/rename")
+	@Operation(summary = "Rename file", tags = { "07. Rename File" })
 	public CodeFile rename(@PathVariable Long id, @Valid @RequestBody FileRenameRequest request,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
 		CodeFile file = service.getFileById(id);
@@ -114,6 +123,7 @@ public class FileResource {
 	}
 
 	@PutMapping("/{id}/move")
+	@Operation(summary = "Move file", tags = { "08. Move File" })
 	public CodeFile move(@PathVariable Long id, @Valid @RequestBody FileMoveRequest request,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
 		CodeFile file = service.getFileById(id);
@@ -122,6 +132,7 @@ public class FileResource {
 	}
 
 	@DeleteMapping("/{id}")
+	@Operation(summary = "Delete file", tags = { "11. Delete File" })
 	public ResponseEntity<Void> delete(@PathVariable Long id,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
 		CodeFile file = service.getFileById(id);
@@ -131,6 +142,7 @@ public class FileResource {
 	}
 
 	@PostMapping("/{id}/restore")
+	@Operation(summary = "Restore file", tags = { "12. Restore File" })
 	public ResponseEntity<Void> restore(@PathVariable Long id,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
 		CodeFile file = service.getFileById(id);
@@ -140,6 +152,7 @@ public class FileResource {
 	}
 
 	@GetMapping("/project/{projectId}/tree")
+	@Operation(summary = "Project tree", tags = { "09. Get Project Tree" })
 	public List<FileTreeNode> getTree(@PathVariable Long projectId,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
 		verifyReadAccess(projectId, authorizationHeader);
@@ -147,6 +160,7 @@ public class FileResource {
 	}
 
 	@GetMapping("/project/{projectId}/search")
+	@Operation(summary = "Search files", tags = { "10. Search Project Files" })
 	public List<CodeFile> search(@PathVariable Long projectId, @RequestParam String query,
 			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {

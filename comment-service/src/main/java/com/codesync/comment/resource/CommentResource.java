@@ -8,6 +8,7 @@ import com.codesync.comment.entity.Comment;
 import com.codesync.comment.exception.InvalidCommentRequestException;
 import com.codesync.comment.security.AuthenticatedUser;
 import com.codesync.comment.service.CommentService;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -41,6 +42,7 @@ public class CommentResource {
 	}
 
 	@PostMapping
+	@Operation(summary = "Add comment", tags = { "01. Add Comment" })
 	public ResponseEntity<Comment> add(@Valid @RequestBody AddCommentRequest request,
 			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
@@ -51,6 +53,7 @@ public class CommentResource {
 	}
 
 	@GetMapping("/{id}")
+	@Operation(summary = "Comment by id", tags = { "02. Get Comment By Id" })
 	public Comment getById(@PathVariable Long id,
 			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
@@ -61,6 +64,7 @@ public class CommentResource {
 	}
 
 	@GetMapping("/file/{fileId}")
+	@Operation(summary = "Comments by file", tags = { "03. Get Comments By File" })
 	public List<Comment> getByFile(@PathVariable Long fileId,
 			@RequestParam(required = false) Long projectId,
 			Authentication authentication,
@@ -72,6 +76,7 @@ public class CommentResource {
 	}
 
 	@GetMapping("/project/{projectId}")
+	@Operation(summary = "Comments by project", tags = { "04. Get Comments By Project" })
 	public List<Comment> getByProject(@PathVariable Long projectId,
 			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
@@ -81,6 +86,7 @@ public class CommentResource {
 	}
 
 	@GetMapping("/{id}/replies")
+	@Operation(summary = "Replies", tags = { "05. Get Replies" })
 	public List<Comment> getReplies(@PathVariable Long id,
 			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
@@ -91,6 +97,7 @@ public class CommentResource {
 	}
 
 	@GetMapping("/file/{fileId}/line/{lineNumber}")
+	@Operation(summary = "Comments by line", tags = { "06. Get Comments By Line" })
 	public List<Comment> getByLine(@PathVariable Long fileId, @PathVariable Integer lineNumber,
 			@RequestParam(required = false) Long projectId,
 			Authentication authentication,
@@ -102,6 +109,7 @@ public class CommentResource {
 	}
 
 	@GetMapping("/file/{fileId}/count")
+	@Operation(summary = "Comment count", tags = { "07. Get Comment Count" })
 	public long getCommentCount(@PathVariable Long fileId,
 			@RequestParam(required = false) Long projectId,
 			Authentication authentication,
@@ -114,6 +122,7 @@ public class CommentResource {
 	}
 
 	@GetMapping("/resolved")
+	@Operation(summary = "Resolved filter", tags = { "08. Get Comments By Resolved State" })
 	public List<Comment> getByResolved(@RequestParam(required = false) Long projectId,
 			@RequestParam(defaultValue = "false") boolean resolved,
 			Authentication authentication,
@@ -126,6 +135,7 @@ public class CommentResource {
 	}
 
 	@PutMapping("/{id}")
+	@Operation(summary = "Update comment", tags = { "09. Update Comment" })
 	public Comment update(@PathVariable Long id, @Valid @RequestBody UpdateCommentRequest request,
 			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
@@ -136,6 +146,7 @@ public class CommentResource {
 	}
 
 	@PutMapping("/{id}/resolve")
+	@Operation(summary = "Resolve comment", tags = { "10. Resolve Comment" })
 	public Comment resolve(@PathVariable Long id,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
 		Comment comment = service.getCommentById(id);
@@ -144,6 +155,7 @@ public class CommentResource {
 	}
 
 	@PutMapping("/{id}/unresolve")
+	@Operation(summary = "Unresolve comment", tags = { "11. Unresolve Comment" })
 	public Comment unresolve(@PathVariable Long id,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
 		Comment comment = service.getCommentById(id);
@@ -152,6 +164,7 @@ public class CommentResource {
 	}
 
 	@DeleteMapping("/{id}")
+	@Operation(summary = "Delete comment", tags = { "12. Delete Comment" })
 	public ResponseEntity<Void> delete(@PathVariable Long id,
 			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {

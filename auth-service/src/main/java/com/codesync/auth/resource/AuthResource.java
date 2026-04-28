@@ -11,6 +11,7 @@ import com.codesync.auth.exception.AuthException;
 import com.codesync.auth.mapper.UserMapper;
 import com.codesync.auth.security.AuthenticatedUser;
 import com.codesync.auth.service.AuthService;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -39,6 +40,7 @@ public class AuthResource {
 	}
 
 	@PostMapping("/register")
+	@Operation(summary = "Register a new user", tags = { "1. Register" })
 	public UserResponse register(@Valid @RequestBody RegisterRequest request) {
 		User user = new User();
 		user.setUsername(request.getUsername());
@@ -51,6 +53,7 @@ public class AuthResource {
 	}
 
 	@PostMapping("/admin/bootstrap")
+	@Operation(summary = "Create the first admin user on a fresh system", tags = { "8. First-Time Setup" })
 	public UserResponse bootstrapAdmin(@Valid @RequestBody RegisterRequest request) {
 		User user = new User();
 		user.setUsername(request.getUsername());
@@ -63,35 +66,41 @@ public class AuthResource {
 	}
 
 	@PostMapping("/login")
+	@Operation(summary = "Log in and get a JWT token", tags = { "2. Login" })
 	public AuthResponse login(@Valid @RequestBody LoginRequest request) {
 		String token = service.login(request.getEmail(), request.getPassword());
 		return new AuthResponse(token, "Login successful");
 	}
 
 	@PostMapping("/logout")
+	@Operation(summary = "Log out the current user", tags = { "7. Session End" })
 	public AuthResponse logout(@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
 		service.logout(extractBearerToken(authorizationHeader));
 		return new AuthResponse(null, "Logout successful");
 	}
 
 	@PostMapping("/refresh")
+	@Operation(summary = "Refresh the current JWT token", tags = { "6. Session Maintenance" })
 	public AuthResponse refresh(@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
 		String token = service.refreshToken(extractBearerToken(authorizationHeader));
 		return new AuthResponse(token, "Token refreshed successfully");
 	}
 
 	@GetMapping("/profile/{id}")
+	@Operation(summary = "Get a public profile by user id", tags = { "4. Public Lookup" })
 	public UserResponse getProfile(@PathVariable int id) {
 		User user = service.getUserById(id);
 		return UserMapper.toDTO(user);
 	}
 
 	@GetMapping("/profile")
+	@Operation(summary = "Get the currently logged-in user's profile", tags = { "3. Current User" })
 	public UserResponse getCurrentProfile(Authentication authentication) {
 		return UserMapper.toDTO(service.getUserById(requireCurrentUserId(authentication)));
 	}
 
 	@PutMapping("/profile/{id}")
+	@Operation(summary = "Update a profile by user id as self or admin", tags = { "5. User Maintenance" })
 	public UserResponse updateProfile(@PathVariable int id, @Valid @RequestBody UpdateProfileRequest request,
 			Authentication authentication) {
 		assertCanActOnUser(id, authentication);
@@ -99,12 +108,14 @@ public class AuthResource {
 	}
 
 	@PutMapping("/profile")
+	@Operation(summary = "Update the currently logged-in user's profile", tags = { "5. User Maintenance" })
 	public UserResponse updateCurrentProfile(@Valid @RequestBody UpdateProfileRequest request,
 			Authentication authentication) {
 		return updateProfileInternal(requireCurrentUserId(authentication), request);
 	}
 
 	@PutMapping("/password")
+	@Operation(summary = "Change the current user's password", tags = { "5. User Maintenance" })
 	public ResponseEntity<Void> changeCurrentPassword(@Valid @RequestBody ChangePasswordRequest request,
 			Authentication authentication) {
 		service.changePassword(requireCurrentUserId(authentication), request.getCurrentPassword(),
@@ -113,12 +124,14 @@ public class AuthResource {
 	}
 
 	@PutMapping("/deactivate")
+	@Operation(summary = "Deactivate the current user's account", tags = { "5. User Maintenance" })
 	public ResponseEntity<Void> deactivateCurrentAccount(Authentication authentication) {
 		service.deactivateAccount(requireCurrentUserId(authentication));
 		return ResponseEntity.noContent().build();
 	}
 
 	@PutMapping("/deactivate/{id}")
+	@Operation(summary = "Deactivate a user by id as self or admin", tags = { "5. User Maintenance" })
 	public ResponseEntity<Void> deactivateById(@PathVariable int id, Authentication authentication) {
 		assertCanActOnUser(id, authentication);
 		service.deactivateAccount(id);
@@ -126,6 +139,7 @@ public class AuthResource {
 	}
 
 	@PutMapping("/password/{id}")
+	@Operation(summary = "Change a user's password by id as self or admin", tags = { "5. User Maintenance" })
 	public ResponseEntity<Void> changePassword(@PathVariable int id, @Valid @RequestBody ChangePasswordRequest request,
 			Authentication authentication) {
 		assertCanActOnUser(id, authentication);
@@ -134,6 +148,7 @@ public class AuthResource {
 	}
 
 	@DeleteMapping("/deactivate/{id}")
+	@Operation(summary = "Deactivate a user by id using the delete route", tags = { "5. User Maintenance" })
 	public ResponseEntity<Void> deactivate(@PathVariable int id, Authentication authentication) {
 		assertCanActOnUser(id, authentication);
 		service.deactivateAccount(id);
@@ -152,18 +167,21 @@ public class AuthResource {
 	}
 
 	@GetMapping("/search")
+	@Operation(summary = "Search users by username", tags = { "4. Public Lookup" })
 	public List<UserResponse> search(@RequestParam String username) {
 		List<User> users = service.searchUsers(username);
 		return users.stream().map(UserMapper::toDTO).collect(Collectors.toList());
 	}
 
 	@GetMapping("/users")
+	@Operation(summary = "List all users as admin", tags = { "9. Admin Only" })
 	public List<UserResponse> getAllUsers(Authentication authentication) {
 		assertAdmin(authentication);
 		return service.getAllUsers().stream().map(UserMapper::toDTO).collect(Collectors.toList());
 	}
 
 	@PutMapping("/reactivate/{id}")
+	@Operation(summary = "Reactivate a user by id as admin", tags = { "9. Admin Only" })
 	public ResponseEntity<Void> reactivate(@PathVariable int id, Authentication authentication) {
 		assertAdmin(authentication);
 		service.reactivateAccount(id);
@@ -171,6 +189,7 @@ public class AuthResource {
 	}
 
 	@DeleteMapping("/users/{id}")
+	@Operation(summary = "Delete a user permanently as admin", tags = { "9. Admin Only" })
 	public ResponseEntity<Void> deleteUser(@PathVariable int id, Authentication authentication) {
 		assertAdmin(authentication);
 		service.deleteAccount(id);

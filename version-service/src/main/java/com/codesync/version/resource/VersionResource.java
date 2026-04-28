@@ -12,6 +12,7 @@ import com.codesync.version.exception.InvalidVersionRequestException;
 import com.codesync.version.exception.ResourceNotFoundException;
 import com.codesync.version.security.AuthenticatedUser;
 import com.codesync.version.service.VersionService;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -43,6 +44,7 @@ public class VersionResource {
 	}
 
 	@PostMapping
+	@Operation(summary = "Create snapshot", tags = { "01. Create Snapshot" })
 	public ResponseEntity<Snapshot> createSnapshot(@Valid @RequestBody CreateSnapshotRequest request,
 			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
@@ -53,6 +55,7 @@ public class VersionResource {
 	}
 
 	@GetMapping("/{snapshotId}")
+	@Operation(summary = "Snapshot by id", tags = { "02. Get Snapshot By Id" })
 	public Snapshot getSnapshotById(@PathVariable Long snapshotId,
 			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
@@ -63,6 +66,7 @@ public class VersionResource {
 	}
 
 	@GetMapping("/file/{fileId}")
+	@Operation(summary = "Snapshots by file", tags = { "03. Get Snapshots By File" })
 	public List<Snapshot> getSnapshotsByFile(@PathVariable Long fileId,
 			@RequestParam(required = false) Long projectId,
 			Authentication authentication,
@@ -74,6 +78,7 @@ public class VersionResource {
 	}
 
 	@GetMapping("/project/{projectId}")
+	@Operation(summary = "Snapshots by project", tags = { "04. Get Snapshots By Project" })
 	public List<Snapshot> getSnapshotsByProject(@PathVariable Long projectId,
 			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
@@ -83,6 +88,7 @@ public class VersionResource {
 	}
 
 	@GetMapping("/project/{projectId}/branch/{branch}")
+	@Operation(summary = "Snapshots by branch", tags = { "05. Get Snapshots By Branch" })
 	public List<Snapshot> getSnapshotsByBranch(@PathVariable Long projectId, @PathVariable String branch,
 			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
@@ -92,6 +98,7 @@ public class VersionResource {
 	}
 
 	@GetMapping("/file/{fileId}/latest")
+	@Operation(summary = "Latest snapshot", tags = { "06. Get Latest Snapshot" })
 	public ResponseEntity<Snapshot> getLatestSnapshot(@PathVariable Long fileId,
 			@RequestParam(required = false) String branch,
 			Authentication authentication,
@@ -108,6 +115,7 @@ public class VersionResource {
 	}
 
 	@GetMapping("/file/{fileId}/history")
+	@Operation(summary = "File history", tags = { "07. Get File History" })
 	public List<Snapshot> getFileHistory(@PathVariable Long fileId,
 			@RequestParam(required = false) Long projectId,
 			Authentication authentication,
@@ -119,6 +127,7 @@ public class VersionResource {
 	}
 
 	@GetMapping("/diff")
+	@Operation(summary = "Diff snapshots", tags = { "08. Diff Snapshots" })
 	public DiffResponse diffSnapshots(@RequestParam Long fromSnapshotId, @RequestParam Long toSnapshotId,
 			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
@@ -133,6 +142,7 @@ public class VersionResource {
 	}
 
 	@PostMapping("/{snapshotId}/restore")
+	@Operation(summary = "Restore snapshot", tags = { "09. Restore Snapshot" })
 	public Snapshot restoreSnapshot(@PathVariable Long snapshotId,
 			@RequestBody(required = false) RestoreSnapshotRequest request,
 			Authentication authentication,
@@ -143,6 +153,7 @@ public class VersionResource {
 	}
 
 	@PostMapping("/branches")
+	@Operation(summary = "Create branch", tags = { "10. Create Branch" })
 	public ResponseEntity<Snapshot> createBranch(@Valid @RequestBody CreateBranchRequest request,
 			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
@@ -153,6 +164,7 @@ public class VersionResource {
 	}
 
 	@PostMapping("/{snapshotId}/tag")
+	@Operation(summary = "Tag snapshot", tags = { "11. Tag Snapshot" })
 	public Snapshot tagSnapshot(@PathVariable Long snapshotId, @Valid @RequestBody TagSnapshotRequest request,
 			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {

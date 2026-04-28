@@ -1,5 +1,6 @@
 package com.codesync.api.web;
 
+import io.swagger.v3.oas.annotations.Operation;
 import java.util.Map;
 
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,6 +20,7 @@ public class GatewayInfoController {
 			"executionService", "/api/v1/executions/**, /ws/executions/**");
 
 	@GetMapping({ "/", "/gateway/info" })
+	@Operation(summary = "Gateway info", tags = { "01. Overview" })
 	public Map<String, Object> gatewayInfo() {
 		return Map.of(
 				"name", "CodeSync API Gateway",

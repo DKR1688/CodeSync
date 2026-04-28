@@ -8,6 +8,7 @@ import com.codesync.notification.enums.NotificationType;
 import com.codesync.notification.exception.InvalidNotificationRequestException;
 import com.codesync.notification.security.AuthenticatedUser;
 import com.codesync.notification.service.NotificationService;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -38,6 +39,7 @@ public class NotificationResource {
 	}
 
 	@PostMapping
+	@Operation(summary = "Send single", tags = { "01. Send Single Notification" })
 	public ResponseEntity<Notification> send(@Valid @RequestBody SendNotificationRequest request,
 			Authentication authentication) {
 		Long currentUserId = requireCurrentUserId(authentication);
@@ -48,6 +50,7 @@ public class NotificationResource {
 	}
 
 	@PostMapping("/bulk")
+	@Operation(summary = "Send bulk", tags = { "02. Send Bulk Notifications" })
 	public ResponseEntity<List<Notification>> sendBulk(@Valid @RequestBody BulkNotificationRequest request,
 			Authentication authentication) {
 		requireAdmin(authentication);
@@ -55,6 +58,7 @@ public class NotificationResource {
 	}
 
 	@PostMapping("/email")
+	@Operation(summary = "Send email", tags = { "03. Send Email Notification" })
 	public ResponseEntity<Void> sendEmail(@Valid @RequestBody EmailNotificationRequest request,
 			Authentication authentication) {
 		requireAdmin(authentication);
@@ -63,6 +67,7 @@ public class NotificationResource {
 	}
 
 	@GetMapping("/{id}")
+	@Operation(summary = "Notification by id", tags = { "04. Get Notification By Id" })
 	public Notification getById(@PathVariable Long id, Authentication authentication) {
 		Notification notification = service.getById(id);
 		assertRecipientOrAdmin(notification.getRecipientId(), authentication);
@@ -70,18 +75,21 @@ public class NotificationResource {
 	}
 
 	@GetMapping("/recipient/{recipientId}")
+	@Operation(summary = "Notifications by recipient", tags = { "05. Get Notifications By Recipient" })
 	public List<Notification> getByRecipient(@PathVariable Long recipientId, Authentication authentication) {
 		assertRecipientOrAdmin(recipientId, authentication);
 		return service.getByRecipient(recipientId);
 	}
 
 	@GetMapping("/recipient/{recipientId}/unread-count")
+	@Operation(summary = "Unread count", tags = { "06. Get Unread Count" })
 	public Map<String, Long> getUnreadCount(@PathVariable Long recipientId, Authentication authentication) {
 		assertRecipientOrAdmin(recipientId, authentication);
 		return Map.of("recipientId", recipientId, "unreadCount", service.getUnreadCount(recipientId));
 	}
 
 	@PutMapping("/{id}/read")
+	@Operation(summary = "Mark read", tags = { "07. Mark Notification As Read" })
 	public Notification markAsRead(@PathVariable Long id, Authentication authentication) {
 		Notification notification = service.getById(id);
 		assertRecipientOrAdmin(notification.getRecipientId(), authentication);
@@ -89,18 +97,21 @@ public class NotificationResource {
 	}
 
 	@PutMapping("/recipient/{recipientId}/read-all")
+	@Operation(summary = "Mark all read", tags = { "08. Mark All Notifications As Read" })
 	public Map<String, Integer> markAllRead(@PathVariable Long recipientId, Authentication authentication) {
 		assertRecipientOrAdmin(recipientId, authentication);
 		return Map.of("updatedCount", service.markAllRead(recipientId));
 	}
 
 	@DeleteMapping("/recipient/{recipientId}/read")
+	@Operation(summary = "Delete read", tags = { "09. Delete Read Notifications" })
 	public Map<String, Integer> deleteRead(@PathVariable Long recipientId, Authentication authentication) {
 		assertRecipientOrAdmin(recipientId, authentication);
 		return Map.of("deletedCount", service.deleteRead(recipientId));
 	}
 
 	@DeleteMapping("/{id}")
+	@Operation(summary = "Delete notification", tags = { "10. Delete Notification" })
 	public ResponseEntity<Void> delete(@PathVariable Long id, Authentication authentication) {
 		Notification notification = service.getById(id);
 		assertRecipientOrAdmin(notification.getRecipientId(), authentication);
@@ -109,18 +120,21 @@ public class NotificationResource {
 	}
 
 	@GetMapping("/all")
+	@Operation(summary = "All notifications", tags = { "11. Get All Notifications" })
 	public List<Notification> getAll(Authentication authentication) {
 		requireAdmin(authentication);
 		return service.getAll();
 	}
 
 	@GetMapping("/type/{type}")
+	@Operation(summary = "By type", tags = { "12. Get Notifications By Type" })
 	public List<Notification> getByType(@PathVariable NotificationType type, Authentication authentication) {
 		requireAdmin(authentication);
 		return service.getByType(type);
 	}
 
 	@GetMapping("/related/{relatedId}")
+	@Operation(summary = "By related id", tags = { "13. Get Notifications By Related Id" })
 	public List<Notification> getByRelatedId(@PathVariable String relatedId, Authentication authentication) {
 		requireAdmin(authentication);
 		return service.getByRelatedId(relatedId);
