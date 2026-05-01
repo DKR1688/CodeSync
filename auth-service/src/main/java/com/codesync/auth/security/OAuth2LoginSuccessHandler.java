@@ -43,7 +43,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
 		User user = authService.upsertOAuthUser(email, username, name, provider);
 		String token = authService.issueToken(user);
 
-		String redirectUrl = frontendBaseUrl + "/oauth/callback?provider=" + provider.toLowerCase()
+		String redirectUrl = frontendBaseUrl + "/auth/callback?provider=" + provider.toLowerCase()
 				+ "&success=true&token=" + token;
 		getRedirectStrategy().sendRedirect(request, response, redirectUrl);
 	}
