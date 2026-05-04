@@ -1,0 +1,57 @@
+name: Sonar Backend
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  sonar:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: auth-service
+            key: codesync-auth-service
+          - service: project-service
+            key: codesync-project-service
+          - service: file-service
+            key: codesync-file-service
+          - service: collab-service
+            key: codesync-collab-service
+          - service: version-service
+            key: codesync-version-service
+          - service: comment-service
+            key: codesync-comment-service
+          - service: notification-service
+            key: codesync-notification-service
+          - service: execution-service
+            key: codesync-execution-service
+          - service: api-gateway
+            key: codesync-api-gateway
+          - service: eureka-server
+            key: codesync-eureka-server
+
+    defaults:
+      run:
+        working-directory: ${{ matrix.service }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      - run: >
+          mvn -B verify
+          org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+          -Dsonar.projectKey=${{ matrix.key }}
+          -Dsonar.organization=YOUR_ORG_KEY
+          -Dsonar.token=${{ secrets.SONAR_TOKEN }}
+          -Dsonar.qualitygate.wait=true
