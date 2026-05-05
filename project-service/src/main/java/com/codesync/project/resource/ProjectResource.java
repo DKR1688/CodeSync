@@ -232,7 +232,7 @@ public class ProjectResource {
 	public ResponseEntity<Void> addMember(@PathVariable Long id, @PathVariable Long userId, Authentication authentication) {
 		assertOwnerOrAdmin(service.getProjectById(id), authentication);
 		authServiceClient.assertUserExists(userId);
-		service.addMember(id, userId);
+		service.addMember(id, userId, requireCurrentUserId(authentication));
 		return ResponseEntity.noContent().build();
 	}
 

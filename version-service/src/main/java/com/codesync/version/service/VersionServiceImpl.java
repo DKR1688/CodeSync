@@ -6,6 +6,7 @@ import com.codesync.version.dto.CreateSnapshotRequest;
 import com.codesync.version.dto.DiffLine;
 import com.codesync.version.dto.DiffOperation;
 import com.codesync.version.dto.DiffResponse;
+import com.codesync.version.dto.FileUpdatedEvent;
 import com.codesync.version.dto.RestoreSnapshotRequest;
 import com.codesync.version.entity.Snapshot;
 import com.codesync.version.exception.InvalidVersionRequestException;
@@ -187,6 +188,33 @@ public class VersionServiceImpl implements VersionService {
 	@Transactional(readOnly = true)
 	public List<Snapshot> getFileHistory(Long fileId) {
 		return getSnapshotsByFile(fileId);
+	}
+
+	public Snapshot createSnapshotFromFileUpdate(FileUpdatedEvent event) {
+		if (event == null) {
+			throw new InvalidVersionRequestException("File update event is required");
+		}
+		validatePositiveId(event.getProjectId(), "Project id");
+		validatePositiveId(event.getFileId(), "File id");
+		validatePositiveId(event.getEditorId(), "Editor user id");
+
+		String branch = normalizeBranch(event.getBranch());
+		String content = event.getContent() == null ? "" : event.getContent();
+		java.util.Optional<Snapshot> latestSnapshot = findLatestSnapshot(event.getFileId(), branch);
+		if (latestSnapshot.isPresent() && content.equals(latestSnapshot.get().getContent())) {
+			return latestSnapshot.get();
+		}
+
+		Snapshot snapshot = new Snapshot();
+		snapshot.setProjectId(event.getProjectId());
+		snapshot.setFileId(event.getFileId());
+		snapshot.setAuthorId(event.getEditorId());
+		snapshot.setMessage(normalizeMessage(event.getMessage(), "Auto snapshot after file update"));
+		snapshot.setContent(content);
+		snapshot.setHash(sha256(content));
+		snapshot.setParentSnapshotId(latestSnapshot.map(Snapshot::getSnapshotId).orElse(null));
+		snapshot.setBranch(branch);
+		return repository.save(snapshot);
 	}
 
 	private Long resolveParentSnapshotId(Long requestedParentId, Long projectId, Long fileId, String branch) {

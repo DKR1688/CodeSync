@@ -24,9 +24,11 @@ import java.util.Set;
 public class FileServiceImpl implements FileService {
 
 	private final FileRepository repository;
+	private final FileEventPublisher eventPublisher;
 
-	public FileServiceImpl(FileRepository repository) {
+	public FileServiceImpl(FileRepository repository, FileEventPublisher eventPublisher) {
 		this.repository = repository;
+		this.eventPublisher = eventPublisher;
 	}
 
 	@Override
@@ -92,7 +94,11 @@ public class FileServiceImpl implements FileService {
 		file.setContent(updatedContent);
 		file.setSize(computeSize(updatedContent));
 		file.setLastEditedBy(editorId);
-		return repository.save(file);
+		CodeFile saved = repository.save(file);
+		if (eventPublisher != null) {
+			eventPublisher.publishFileUpdated(saved);
+		}
+		return saved;
 	}
 
 	@Override

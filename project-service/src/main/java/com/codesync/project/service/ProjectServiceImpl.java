@@ -28,9 +28,11 @@ public class ProjectServiceImpl implements ProjectService {
 	private static final Sort RECENT_FIRST_SORT = Sort.by(Sort.Order.desc("updatedAt"));
 
 	private final ProjectRepository repository;
+	private final ProjectEventPublisher eventPublisher;
 
-	public ProjectServiceImpl(ProjectRepository repository) {
+	public ProjectServiceImpl(ProjectRepository repository, ProjectEventPublisher eventPublisher) {
 		this.repository = repository;
+		this.eventPublisher = eventPublisher;
 	}
 
 	@Override
@@ -43,7 +45,9 @@ public class ProjectServiceImpl implements ProjectService {
 		project.setStarCount(0);
 		project.setForkCount(0);
 
-		return toDTO(repository.save(project));
+		ProjectDTO created = toDTO(repository.save(project));
+		publishProjectCreated(created);
+		return created;
 	}
 
 	@Override
@@ -185,16 +189,22 @@ public class ProjectServiceImpl implements ProjectService {
 	}
 
 	@Override
-	public void addMember(Long projectId, Long userId) {
+	public void addMember(Long projectId, Long userId, Long actorId) {
 		validatePositiveId(projectId, "Project id");
 		validatePositiveId(userId, "Member user id");
+		validatePositiveId(actorId, "Actor user id");
 
 		Project project = getProjectOrThrow(projectId);
 		if (project.isArchived()) {
 			throw new InvalidProjectRequestException("Archived projects cannot be modified");
 		}
 		project.getMemberUserIds().add(userId);
-		repository.save(project);
+		Project saved = repository.save(project);
+		publishMemberAdded(toDTO(saved != null ? saved : project), userId, actorId);
+	}
+
+	public void addMember(Long projectId, Long userId) {
+		addMember(projectId, userId, userId);
 	}
 
 	@Override
@@ -238,6 +248,18 @@ public class ProjectServiceImpl implements ProjectService {
 	private Project getProjectOrThrow(Long projectId) {
 		return repository.findById(projectId)
 				.orElseThrow(() -> new ResourceNotFoundException("Project not found with id " + projectId));
+	}
+
+	private void publishProjectCreated(ProjectDTO project) {
+		if (eventPublisher != null) {
+			eventPublisher.publishProjectCreated(project);
+		}
+	}
+
+	private void publishMemberAdded(ProjectDTO project, Long userId, Long actorId) {
+		if (eventPublisher != null) {
+			eventPublisher.publishMemberAdded(project, userId, actorId);
+		}
 	}
 
 	private void validatePositiveId(Long value, String fieldName) {
