@@ -10,6 +10,9 @@ import com.codesync.notification.exception.ResourceNotFoundException;
 import com.codesync.notification.repository.NotificationRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +25,7 @@ import java.util.List;
 public class NotificationServiceImpl implements NotificationService {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(NotificationServiceImpl.class);
+	private static final String UNREAD_COUNT_CACHE = "notifications.unread-count";
 
 	private final NotificationRepository repository;
 	private final NotificationPublisher publisher;
@@ -35,6 +39,7 @@ public class NotificationServiceImpl implements NotificationService {
 	}
 
 	@Override
+	@CacheEvict(value = UNREAD_COUNT_CACHE, key = "#request.recipientId")
 	public Notification send(SendNotificationRequest request) {
 		if (request == null) {
 			throw new InvalidNotificationRequestException("Notification payload is required");
@@ -46,6 +51,7 @@ public class NotificationServiceImpl implements NotificationService {
 	}
 
 	@Override
+	@CacheEvict(value = UNREAD_COUNT_CACHE, allEntries = true)
 	public List<Notification> sendBulk(BulkNotificationRequest request) {
 		if (request == null) {
 			throw new InvalidNotificationRequestException("Bulk notification payload is required");
@@ -80,6 +86,7 @@ public class NotificationServiceImpl implements NotificationService {
 	}
 
 	@Override
+	@CacheEvict(value = UNREAD_COUNT_CACHE, allEntries = true)
 	public Notification markAsRead(Long notificationId) {
 		Notification notification = getById(notificationId);
 		if (!notification.isRead()) {
@@ -91,6 +98,7 @@ public class NotificationServiceImpl implements NotificationService {
 	}
 
 	@Override
+	@CacheEvict(value = UNREAD_COUNT_CACHE, key = "#recipientId")
 	public int markAllRead(Long recipientId) {
 		validatePositiveId(recipientId, "Recipient id");
 		List<Notification> unread = repository.findByRecipientIdAndIsReadOrderByCreatedAtDescNotificationIdDesc(
@@ -102,6 +110,7 @@ public class NotificationServiceImpl implements NotificationService {
 	}
 
 	@Override
+	@CacheEvict(value = UNREAD_COUNT_CACHE, key = "#recipientId")
 	public int deleteRead(Long recipientId) {
 		validatePositiveId(recipientId, "Recipient id");
 		List<Notification> read = repository.findByRecipientIdAndIsReadOrderByCreatedAtDescNotificationIdDesc(
@@ -120,12 +129,14 @@ public class NotificationServiceImpl implements NotificationService {
 
 	@Override
 	@Transactional(readOnly = true)
+	@Cacheable(value = UNREAD_COUNT_CACHE, key = "#recipientId")
 	public long getUnreadCount(Long recipientId) {
 		validatePositiveId(recipientId, "Recipient id");
 		return repository.countByRecipientIdAndIsRead(recipientId, false);
 	}
 
 	@Override
+	@CacheEvict(value = UNREAD_COUNT_CACHE, allEntries = true)
 	public void deleteNotification(Long notificationId) {
 		Notification notification = getById(notificationId);
 		repository.deleteByNotificationId(notificationId);

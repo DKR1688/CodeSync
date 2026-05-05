@@ -6,6 +6,9 @@ import com.codesync.project.enums.Visibility;
 import com.codesync.project.exception.InvalidProjectRequestException;
 import com.codesync.project.exception.ResourceNotFoundException;
 import com.codesync.project.repository.ProjectRepository;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +22,10 @@ import java.util.stream.Collectors;
 @Service
 @Transactional
 public class ProjectServiceImpl implements ProjectService {
+
+	private static final String PROJECT_BY_ID_CACHE = "projects.by-id";
+	private static final String PUBLIC_PROJECTS_CACHE = "projects.public";
+	private static final String PROJECT_MEMBERS_CACHE = "projects.members";
 
 	private static final Sort DISCOVERY_SORT = Sort.by(
 			Sort.Order.desc("starCount"),
@@ -36,6 +43,10 @@ public class ProjectServiceImpl implements ProjectService {
 	}
 
 	@Override
+	@Caching(evict = {
+			@CacheEvict(value = PROJECT_BY_ID_CACHE, allEntries = true),
+			@CacheEvict(value = PUBLIC_PROJECTS_CACHE, allEntries = true),
+			@CacheEvict(value = PROJECT_MEMBERS_CACHE, allEntries = true) })
 	public ProjectDTO createProject(ProjectDTO dto) {
 		validateProject(dto, true);
 
@@ -52,6 +63,7 @@ public class ProjectServiceImpl implements ProjectService {
 
 	@Override
 	@Transactional(readOnly = true)
+	@Cacheable(value = PROJECT_BY_ID_CACHE, key = "#id")
 	public ProjectDTO getProjectById(Long id) {
 		validatePositiveId(id, "Project id");
 		return toDTO(getProjectOrThrow(id));
@@ -72,6 +84,7 @@ public class ProjectServiceImpl implements ProjectService {
 
 	@Override
 	@Transactional(readOnly = true)
+	@Cacheable(value = PUBLIC_PROJECTS_CACHE)
 	public List<ProjectDTO> getPublicProjects() {
 		return repository.findByVisibilityAndIsArchivedFalse(Visibility.PUBLIC, DISCOVERY_SORT).stream()
 				.map(this::toDTO)
@@ -99,6 +112,10 @@ public class ProjectServiceImpl implements ProjectService {
 	}
 
 	@Override
+	@Caching(evict = {
+			@CacheEvict(value = PROJECT_BY_ID_CACHE, allEntries = true),
+			@CacheEvict(value = PUBLIC_PROJECTS_CACHE, allEntries = true),
+			@CacheEvict(value = PROJECT_MEMBERS_CACHE, allEntries = true) })
 	public ProjectDTO updateProject(Long id, ProjectDTO dto) {
 		validatePositiveId(id, "Project id");
 		validateProject(dto, false);
@@ -109,6 +126,10 @@ public class ProjectServiceImpl implements ProjectService {
 	}
 
 	@Override
+	@Caching(evict = {
+			@CacheEvict(value = PROJECT_BY_ID_CACHE, allEntries = true),
+			@CacheEvict(value = PUBLIC_PROJECTS_CACHE, allEntries = true),
+			@CacheEvict(value = PROJECT_MEMBERS_CACHE, allEntries = true) })
 	public void archiveProject(Long id) {
 		validatePositiveId(id, "Project id");
 		Project project = getProjectOrThrow(id);
@@ -117,6 +138,10 @@ public class ProjectServiceImpl implements ProjectService {
 	}
 
 	@Override
+	@Caching(evict = {
+			@CacheEvict(value = PROJECT_BY_ID_CACHE, allEntries = true),
+			@CacheEvict(value = PUBLIC_PROJECTS_CACHE, allEntries = true),
+			@CacheEvict(value = PROJECT_MEMBERS_CACHE, allEntries = true) })
 	public void deleteProject(Long id) {
 		validatePositiveId(id, "Project id");
 		if (!repository.existsById(id)) {
@@ -126,6 +151,10 @@ public class ProjectServiceImpl implements ProjectService {
 	}
 
 	@Override
+	@Caching(evict = {
+			@CacheEvict(value = PROJECT_BY_ID_CACHE, allEntries = true),
+			@CacheEvict(value = PUBLIC_PROJECTS_CACHE, allEntries = true),
+			@CacheEvict(value = PROJECT_MEMBERS_CACHE, allEntries = true) })
 	public ProjectDTO forkProject(Long id, Long newOwnerId) {
 		validatePositiveId(id, "Project id");
 		validatePositiveId(newOwnerId, "New owner id");
@@ -151,6 +180,10 @@ public class ProjectServiceImpl implements ProjectService {
 	}
 
 	@Override
+	@Caching(evict = {
+			@CacheEvict(value = PROJECT_BY_ID_CACHE, allEntries = true),
+			@CacheEvict(value = PUBLIC_PROJECTS_CACHE, allEntries = true),
+			@CacheEvict(value = PROJECT_MEMBERS_CACHE, allEntries = true) })
 	public void rollbackFork(Long sourceProjectId, Long forkProjectId) {
 		validatePositiveId(sourceProjectId, "Source project id");
 		validatePositiveId(forkProjectId, "Fork project id");
@@ -167,6 +200,10 @@ public class ProjectServiceImpl implements ProjectService {
 	}
 
 	@Override
+	@Caching(evict = {
+			@CacheEvict(value = PROJECT_BY_ID_CACHE, allEntries = true),
+			@CacheEvict(value = PUBLIC_PROJECTS_CACHE, allEntries = true),
+			@CacheEvict(value = PROJECT_MEMBERS_CACHE, allEntries = true) })
 	public void starProject(Long id) {
 		validatePositiveId(id, "Project id");
 		Project project = getProjectOrThrow(id);
@@ -189,6 +226,10 @@ public class ProjectServiceImpl implements ProjectService {
 	}
 
 	@Override
+	@Caching(evict = {
+			@CacheEvict(value = PROJECT_BY_ID_CACHE, allEntries = true),
+			@CacheEvict(value = PUBLIC_PROJECTS_CACHE, allEntries = true),
+			@CacheEvict(value = PROJECT_MEMBERS_CACHE, allEntries = true) })
 	public void addMember(Long projectId, Long userId, Long actorId) {
 		validatePositiveId(projectId, "Project id");
 		validatePositiveId(userId, "Member user id");
@@ -208,6 +249,10 @@ public class ProjectServiceImpl implements ProjectService {
 	}
 
 	@Override
+	@Caching(evict = {
+			@CacheEvict(value = PROJECT_BY_ID_CACHE, allEntries = true),
+			@CacheEvict(value = PUBLIC_PROJECTS_CACHE, allEntries = true),
+			@CacheEvict(value = PROJECT_MEMBERS_CACHE, allEntries = true) })
 	public void removeMember(Long projectId, Long userId) {
 		validatePositiveId(projectId, "Project id");
 		validatePositiveId(userId, "Member user id");
@@ -222,6 +267,7 @@ public class ProjectServiceImpl implements ProjectService {
 
 	@Override
 	@Transactional(readOnly = true)
+	@Cacheable(value = PROJECT_MEMBERS_CACHE, key = "#projectId")
 	public Set<Long> getProjectMembers(Long projectId) {
 		validatePositiveId(projectId, "Project id");
 		return new LinkedHashSet<>(getProjectOrThrow(projectId).getMemberUserIds());

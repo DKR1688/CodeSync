@@ -6,6 +6,10 @@ import com.codesync.auth.repository.UserRepository;
 import com.codesync.auth.security.JwtUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -20,6 +24,8 @@ import java.util.Locale;
 public class AuthServiceImpl implements AuthService {
 
 	private static final Logger logger = LoggerFactory.getLogger(AuthServiceImpl.class);
+	private static final String USER_BY_ID_CACHE = "auth.users.by-id";
+	private static final String USER_SEARCH_CACHE = "auth.users.search";
 
 	@Autowired
 	private UserRepository repo;
@@ -30,6 +36,7 @@ public class AuthServiceImpl implements AuthService {
 	private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
 	@Override
+	@Caching(put = @CachePut(value = USER_BY_ID_CACHE, key = "#result.userId"), evict = @CacheEvict(value = USER_SEARCH_CACHE, allEntries = true))
 	public User register(User user) {
 		validateNewUserIdentity(user.getEmail(), user.getUsername());
 		if (!StringUtils.hasText(user.getPasswordHash())) {
@@ -47,6 +54,9 @@ public class AuthServiceImpl implements AuthService {
 	}
 
 	@Override
+	@Caching(evict = {
+			@CacheEvict(value = USER_BY_ID_CACHE, allEntries = true),
+			@CacheEvict(value = USER_SEARCH_CACHE, allEntries = true) })
 	public User registerFirstAdmin(User user) {
 		if (repo.existsByRoleIgnoreCase("ADMIN")) {
 			throw new AuthException("Admin user already exists");
@@ -56,6 +66,7 @@ public class AuthServiceImpl implements AuthService {
 	}
 
 	@Override
+	@Caching(put = @CachePut(value = USER_BY_ID_CACHE, key = "#result.userId"), evict = @CacheEvict(value = USER_SEARCH_CACHE, allEntries = true))
 	public User upsertOAuthUser(String email, String username, String fullName, String provider) {
 		String normalizedEmail = normalizeEmail(email);
 		String normalizedProvider = defaultProvider(provider);
@@ -146,6 +157,7 @@ public class AuthServiceImpl implements AuthService {
 	}
 
 	@Override
+	@Cacheable(value = USER_BY_ID_CACHE, key = "#id")
 	public User getUserById(int id) {
 		return findUserById(id);
 	}
@@ -156,6 +168,7 @@ public class AuthServiceImpl implements AuthService {
 	}
 
 	@Override
+	@Caching(put = @CachePut(value = USER_BY_ID_CACHE, key = "#result.userId"), evict = @CacheEvict(value = USER_SEARCH_CACHE, allEntries = true))
 	public User updateProfile(int id, User user) {
 		User existing = findUserById(id);
 
@@ -189,6 +202,9 @@ public class AuthServiceImpl implements AuthService {
 	}
 
 	@Override
+	@Caching(evict = {
+			@CacheEvict(value = USER_BY_ID_CACHE, allEntries = true),
+			@CacheEvict(value = USER_SEARCH_CACHE, allEntries = true) })
 	public void changePassword(int id, String currentPassword, String newPassword) {
 		User user = findUserById(id);
 		requireActiveUser(user);
@@ -203,6 +219,7 @@ public class AuthServiceImpl implements AuthService {
 	}
 
 	@Override
+	@Cacheable(value = USER_SEARCH_CACHE, key = "#username.trim().toLowerCase()")
 	public List<User> searchUsers(String username) {
 		if (username == null || username.isBlank()) {
 			throw new AuthException("Username search query cannot be blank");
@@ -211,6 +228,9 @@ public class AuthServiceImpl implements AuthService {
 	}
 
 	@Override
+	@Caching(evict = {
+			@CacheEvict(value = USER_BY_ID_CACHE, allEntries = true),
+			@CacheEvict(value = USER_SEARCH_CACHE, allEntries = true) })
 	public void deactivateAccount(int id) {
 		User user = findUserById(id);
 		user.setActive(false);
@@ -218,6 +238,9 @@ public class AuthServiceImpl implements AuthService {
 	}
 
 	@Override
+	@Caching(evict = {
+			@CacheEvict(value = USER_BY_ID_CACHE, allEntries = true),
+			@CacheEvict(value = USER_SEARCH_CACHE, allEntries = true) })
 	public void reactivateAccount(int id) {
 		User user = findUserById(id);
 		user.setActive(true);
@@ -226,6 +249,9 @@ public class AuthServiceImpl implements AuthService {
 
 	@Override
 	@Transactional
+	@Caching(evict = {
+			@CacheEvict(value = USER_BY_ID_CACHE, allEntries = true),
+			@CacheEvict(value = USER_SEARCH_CACHE, allEntries = true) })
 	public void deleteAccount(int id) {
 		findUserById(id);
 		repo.deleteByUserId(id);
