@@ -67,6 +67,7 @@ class ExecutionServiceImplTest {
 		request.setFileId(22L);
 		request.setLanguage("PY");
 		request.setSourceCode("print('hi')");
+		request.setSourceFileName("examples/app.py");
 		request.setStdin("input");
 
 		ExecutionJob saved = service.submitExecution(request, 33L);
@@ -75,11 +76,29 @@ class ExecutionServiceImplTest {
 		assertThat(saved.getFileId()).isEqualTo(22L);
 		assertThat(saved.getUserId()).isEqualTo(33L);
 		assertThat(saved.getLanguage()).isEqualTo("python");
+		assertThat(saved.getSourceFileName()).isEqualTo("app.py");
 		assertThat(saved.getStatus()).isEqualTo(ExecutionStatus.QUEUED);
 		assertThat(saved.getTimeLimitSeconds()).isEqualTo(7);
 		assertThat(saved.getMemoryLimitMb()).isEqualTo(128);
 		assertThat(saved.getCpuLimit()).isEqualTo(1.0);
 		verify(executionQueue).enqueue(saved.getJobId());
+	}
+
+	@Test
+	void submitExecutionFallsBackToLanguageDefaultSourceFileName() {
+		SupportedLanguage java = language("java", true, 10, 256);
+		java.setSourceFileName("Main.java");
+		when(languageRepository.findById("java")).thenReturn(Optional.of(java));
+		when(executionRepository.save(any(ExecutionJob.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+		SubmitExecutionRequest request = new SubmitExecutionRequest();
+		request.setProjectId(1L);
+		request.setLanguage("java");
+		request.setSourceCode("public class Main {}");
+
+		ExecutionJob saved = service.submitExecution(request, 2L);
+
+		assertThat(saved.getSourceFileName()).isEqualTo("Main.java");
 	}
 
 	@Test

@@ -93,6 +93,7 @@ public class ExecutionServiceImpl implements ExecutionService {
 		job.setUserId(userId);
 		job.setLanguage(language.getLanguage());
 		job.setSourceCode(sourceCode);
+		job.setSourceFileName(resolveSourceFileName(request.getSourceFileName(), language));
 		job.setStdin(stdin);
 		job.setStatus(ExecutionStatus.QUEUED);
 		job.setTimeLimitSeconds(resolveTimeLimit(request.getTimeLimitSeconds(), language));
@@ -285,6 +286,25 @@ public class ExecutionServiceImpl implements ExecutionService {
 		if (size > maxBytes) {
 			throw new InvalidExecutionRequestException(fieldName + " must be " + maxBytes + " bytes or fewer");
 		}
+	}
+
+	private String resolveSourceFileName(String requestedSourceFileName, SupportedLanguage language) {
+		if (!StringUtils.hasText(requestedSourceFileName)) {
+			return language.getSourceFileName();
+		}
+
+		String normalized = requestedSourceFileName.trim().replace('\\', '/');
+		int lastSeparator = normalized.lastIndexOf('/');
+		if (lastSeparator >= 0) {
+			normalized = normalized.substring(lastSeparator + 1);
+		}
+		if (!StringUtils.hasText(normalized) || ".".equals(normalized) || "..".equals(normalized)) {
+			return language.getSourceFileName();
+		}
+		if (normalized.length() > 255) {
+			throw new InvalidExecutionRequestException("Source file name must be 255 characters or fewer");
+		}
+		return normalized;
 	}
 
 	private int resolveTimeLimit(Integer requested, SupportedLanguage language) {

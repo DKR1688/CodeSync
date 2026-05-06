@@ -23,6 +23,9 @@ public class SubmitExecutionRequest {
 	@NotNull
 	private String sourceCode;
 
+	@Size(max = 255)
+	private String sourceFileName;
+
 	private String stdin;
 
 	@Min(1)
@@ -65,6 +68,14 @@ public class SubmitExecutionRequest {
 
 	public void setSourceCode(String sourceCode) {
 		this.sourceCode = sourceCode;
+	}
+
+	public String getSourceFileName() {
+		return sourceFileName;
+	}
+
+	public void setSourceFileName(String sourceFileName) {
+		this.sourceFileName = sourceFileName;
 	}
 
 	public String getStdin() {

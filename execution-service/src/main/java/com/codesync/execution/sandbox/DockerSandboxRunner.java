@@ -29,11 +29,14 @@ import java.util.stream.Stream;
 public class DockerSandboxRunner implements SandboxRunner {
 
 	private final boolean dockerEnabled;
+	private final Path workspaceRoot;
 	private final ExecutionProcessManager processManager;
 
 	public DockerSandboxRunner(@Value("${codesync.execution.docker.enabled:true}") boolean dockerEnabled,
+			@Value("${codesync.execution.workspace-root:./runtime/executions}") String workspaceRoot,
 			ExecutionProcessManager processManager) {
 		this.dockerEnabled = dockerEnabled;
+		this.workspaceRoot = Path.of(workspaceRoot).toAbsolutePath().normalize();
 		this.processManager = processManager;
 	}
 
@@ -56,11 +59,13 @@ public class DockerSandboxRunner implements SandboxRunner {
 		Path workDir = null;
 		ExecutorService streamExecutor = Executors.newFixedThreadPool(2);
 		try {
-			workDir = Files.createTempDirectory("codesync-exec-");
-			Files.writeString(workDir.resolve(language.getSourceFileName()),
+			Files.createDirectories(workspaceRoot);
+			workDir = Files.createTempDirectory(workspaceRoot, "codesync-exec-");
+			String sourceFileName = resolveSourceFileName(job, language);
+			Files.writeString(workDir.resolve(sourceFileName),
 					job.getSourceCode() == null ? "" : job.getSourceCode(), StandardCharsets.UTF_8);
 
-			Process process = new ProcessBuilder(buildDockerCommand(job, language, workDir))
+			Process process = new ProcessBuilder(buildDockerCommand(job, language, workDir, sourceFileName))
 					.redirectErrorStream(false)
 					.start();
 			processManager.register(job.getJobId(), process);
@@ -142,7 +147,8 @@ public class DockerSandboxRunner implements SandboxRunner {
 		}
 	}
 
-	private List<String> buildDockerCommand(ExecutionJob job, SupportedLanguage language, Path workDir) {
+	private List<String> buildDockerCommand(ExecutionJob job, SupportedLanguage language, Path workDir,
+			String sourceFileName) {
 		List<String> command = new ArrayList<>();
 		command.add("docker");
 		command.add("run");
@@ -156,14 +162,24 @@ public class DockerSandboxRunner implements SandboxRunner {
 		command.add("--memory-swap");
 		command.add(job.getMemoryLimitMb() + "m");
 		command.add("--pids-limit");
-		command.add("64");
+		command.add("256");
 		command.add("--cap-drop");
 		command.add("ALL");
 		command.add("--security-opt");
 		command.add("no-new-privileges");
 		command.add("--read-only");
 		command.add("--tmpfs");
-		command.add("/tmp:rw,exec,nosuid,size=64m");
+		command.add("/tmp:rw,exec,nosuid,size=32m");
+		command.add("-e");
+		command.add("HOME=/tmp/codesync");
+		command.add("-e");
+		command.add("XDG_CACHE_HOME=/tmp/codesync/.cache");
+		command.add("-e");
+		command.add("TMPDIR=/tmp/codesync/.tmp");
+		command.add("-e");
+		command.add("GOCACHE=/tmp/codesync/.cache/go-build");
+		command.add("-e");
+		command.add("SWIFTPM_MODULECACHE_OVERRIDE=/tmp/codesync/.cache/clang/ModuleCache");
 		command.add("-v");
 		command.add(workDir.toAbsolutePath() + ":/tmp/codesync:rw");
 		command.add("-w");
@@ -173,8 +189,65 @@ public class DockerSandboxRunner implements SandboxRunner {
 		command.add("sh");
 		command.add(language.getDockerImage());
 		command.add("-lc");
-		command.add(language.getRunCommand());
+		command.add("mkdir -p /tmp/codesync/.cache/clang/ModuleCache /tmp/codesync/.cache/go-build /tmp/codesync/.tmp && "
+				+ resolveRunCommand(language, sourceFileName));
 		return command;
+	}
+
+	static String resolveRunCommand(SupportedLanguage language, String sourceFileName) {
+		String fallbackSourceFileName = language.getSourceFileName();
+		String resolvedCommand = language.getRunCommand();
+		String sourceBaseName = stripExtension(sourceFileName);
+		String fallbackBaseName = stripExtension(fallbackSourceFileName);
+
+		resolvedCommand = resolvedCommand
+				.replace("{{sourceFileName}}", sourceFileName)
+				.replace("{{sourceBaseName}}", sourceBaseName)
+				.replace("{{defaultSourceFileName}}", fallbackSourceFileName)
+				.replace("{{defaultSourceBaseName}}", fallbackBaseName);
+
+		if (!fallbackSourceFileName.equals(sourceFileName)) {
+			resolvedCommand = resolvedCommand.replace(fallbackSourceFileName, sourceFileName);
+		}
+		if (!fallbackBaseName.equals(sourceBaseName)) {
+			resolvedCommand = replaceWholeWord(resolvedCommand, fallbackBaseName, sourceBaseName);
+		}
+		return applyLanguageCommandOverrides(language.getLanguage(), resolvedCommand, sourceFileName);
+	}
+
+	private String resolveSourceFileName(ExecutionJob job, SupportedLanguage language) {
+		if (job.getSourceFileName() == null || job.getSourceFileName().isBlank()) {
+			return language.getSourceFileName();
+		}
+		return job.getSourceFileName().trim();
+	}
+
+	private static String stripExtension(String fileName) {
+		int dotIndex = fileName.lastIndexOf('.');
+		return dotIndex > 0 ? fileName.substring(0, dotIndex) : fileName;
+	}
+
+	private static String replaceWholeWord(String value, String target, String replacement) {
+		if (target.isBlank()) {
+			return value;
+		}
+		return value.replaceAll("(?<![A-Za-z0-9_])" + java.util.regex.Pattern.quote(target) + "(?![A-Za-z0-9_])",
+				java.util.regex.Matcher.quoteReplacement(replacement));
+	}
+
+	private static String applyLanguageCommandOverrides(String languageKey, String resolvedCommand,
+			String sourceFileName) {
+		if (languageKey == null || languageKey.isBlank()) {
+			return resolvedCommand;
+		}
+		return switch (languageKey) {
+			case "go" -> "GOMAXPROCS=1 GOFLAGS=-p=1 /usr/local/go/bin/go run " + sourceFileName;
+			case "kotlin" -> "/usr/lib/kotlinc/bin/kotlinc -J-Xms32m -J-Xmx320m "
+					+ sourceFileName
+					+ " -include-runtime -d main.jar && /usr/java/openjdk-12/bin/java -Xms32m -Xmx192m -jar main.jar";
+			case "rust" -> "/usr/local/cargo/bin/rustc " + sourceFileName + " -O -o main && ./main";
+			default -> resolvedCommand;
+		};
 	}
 
 	private void writeStdin(Process process, String stdin) {
@@ -205,7 +278,11 @@ public class DockerSandboxRunner implements SandboxRunner {
 			while ((line = reader.readLine()) != null) {
 				builder.append(line).append(System.lineSeparator());
 				if (streamConsumer != null) {
-					streamConsumer.accept(line + System.lineSeparator());
+					try {
+						streamConsumer.accept(line + System.lineSeparator());
+					} catch (RuntimeException ignored) {
+						// Live stream delivery is best-effort. Persisted stdout/stderr should still succeed.
+					}
 				}
 			}
 			return builder.toString();
@@ -214,7 +291,7 @@ public class DockerSandboxRunner implements SandboxRunner {
 
 	private String getCaptured(Future<String> future) {
 		try {
-			return future.get(1, TimeUnit.SECONDS);
+			return future.get(5, TimeUnit.SECONDS);
 		} catch (Exception ex) {
 			return "";
 		}

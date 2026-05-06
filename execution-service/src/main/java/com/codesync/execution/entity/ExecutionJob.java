@@ -44,6 +44,9 @@ public class ExecutionJob {
 	@Column(name = "source_code", nullable = false, columnDefinition = "LONGTEXT")
 	private String sourceCode = "";
 
+	@Column(name = "source_file_name", length = 255)
+	private String sourceFileName;
+
 	@Column(columnDefinition = "TEXT")
 	private String stdin = "";
 
@@ -143,6 +146,14 @@ public class ExecutionJob {
 
 	public void setSourceCode(String sourceCode) {
 		this.sourceCode = sourceCode;
+	}
+
+	public String getSourceFileName() {
+		return sourceFileName;
+	}
+
+	public void setSourceFileName(String sourceFileName) {
+		this.sourceFileName = sourceFileName;
 	}
 
 	public String getStdin() {
