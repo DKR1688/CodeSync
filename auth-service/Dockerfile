@@ -11,4 +11,4 @@ WORKDIR /app
 
 COPY --from=build /workspace/target/*.jar app.jar
 
-ENTRYPOINT ["sh", "-c", "java -Dserver.port=${PORT:-8080} -jar app.jar"]
+CMD ["sh", "-c", "echo Render PORT=$PORT && java -Dserver.port=$PORT -Dserver.address=0.0.0.0 -jar app.jar"]
