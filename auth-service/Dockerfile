@@ -11,4 +11,6 @@ WORKDIR /app
 
 COPY --from=build /workspace/target/*.jar app.jar
 
-CMD ["sh", "-c", "echo Render PORT=$PORT && java -Dserver.port=$PORT -Dserver.address=0.0.0.0 -jar app.jar"]
+EXPOSE 10000
+
+CMD ["sh", "-c", "echo PORT_IS_$PORT && java -jar app.jar --server.port=${PORT:-10000} --server.address=0.0.0.0"]
