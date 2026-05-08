@@ -6,8 +6,6 @@ import com.codesync.file.exception.InvalidFileRequestException;
 import com.codesync.file.exception.ResourceNotFoundException;
 import com.codesync.file.repository.FileRepository;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.Cache;
-import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -26,20 +24,15 @@ import java.util.Set;
 @Transactional
 public class FileServiceImpl implements FileService {
 
-	private static final String FILE_TREE_CACHE = "files.tree";
-
 	private final FileRepository repository;
 	private final FileEventPublisher eventPublisher;
-	private final CacheManager cacheManager;
 
-	public FileServiceImpl(FileRepository repository, FileEventPublisher eventPublisher, CacheManager cacheManager) {
+	public FileServiceImpl(FileRepository repository, FileEventPublisher eventPublisher) {
 		this.repository = repository;
 		this.eventPublisher = eventPublisher;
-		this.cacheManager = cacheManager;
 	}
 
 	@Override
-	@CacheEvict(value = FILE_TREE_CACHE, allEntries = true)
 	public CodeFile createFile(CodeFile file) {
 		if (file == null) {
 			throw new InvalidFileRequestException("File payload is required");
@@ -110,7 +103,6 @@ public class FileServiceImpl implements FileService {
 	}
 
 	@Override
-	@CacheEvict(value = FILE_TREE_CACHE, allEntries = true)
 	public CodeFile renameFile(Long fileId, String newName) {
 		CodeFile target = requireActiveFile(fileId);
 		String normalizedName = normalizeName(newName);
@@ -119,7 +111,6 @@ public class FileServiceImpl implements FileService {
 	}
 
 	@Override
-	@CacheEvict(value = FILE_TREE_CACHE, allEntries = true)
 	public void deleteFile(Long fileId) {
 		CodeFile target = getFileOrThrow(fileId);
 		List<CodeFile> impactedFiles = collectTargetAndDescendants(target);
@@ -128,7 +119,6 @@ public class FileServiceImpl implements FileService {
 	}
 
 	@Override
-	@CacheEvict(value = FILE_TREE_CACHE, allEntries = true)
 	public void restoreFile(Long fileId) {
 		CodeFile target = getFileOrThrow(fileId);
 		if (!target.isDeleted()) {
@@ -143,13 +133,11 @@ public class FileServiceImpl implements FileService {
 	}
 
 	@Override
-	@CacheEvict(value = FILE_TREE_CACHE, allEntries = true)
 	public CodeFile moveFile(Long fileId, String newPath) {
 		return moveInternal(requireActiveFile(fileId), normalizePath(newPath));
 	}
 
 	@Override
-	@CacheEvict(value = FILE_TREE_CACHE, allEntries = true)
 	public CodeFile createFolder(Long projectId, String folderPath, Long creatorId) {
 		validatePositiveId(projectId, "Project id");
 		validatePositiveId(creatorId, "Created by user id");
@@ -172,7 +160,6 @@ public class FileServiceImpl implements FileService {
 	}
 
 	@Override
-	@CacheEvict(value = FILE_TREE_CACHE, allEntries = true)
 	public void copyProjectFiles(Long sourceProjectId, Long targetProjectId, Long actorUserId) {
 		validatePositiveId(sourceProjectId, "Source project id");
 		validatePositiveId(targetProjectId, "Target project id");
@@ -203,19 +190,7 @@ public class FileServiceImpl implements FileService {
 	@Transactional(readOnly = true)
 	public List<FileTreeNode> getFileTree(Long projectId) {
 		validatePositiveId(projectId, "Project id");
-		Cache cache = cacheManager != null ? cacheManager.getCache(FILE_TREE_CACHE) : null;
-		if (cache != null) {
-			FileTreeCacheEntry cached = cache.get(projectId, FileTreeCacheEntry.class);
-			if (cached != null) {
-				return new ArrayList<>(cached.nodes());
-			}
-		}
-
-		List<FileTreeNode> tree = buildFileTree(projectId);
-		if (cache != null) {
-			cache.put(projectId, new FileTreeCacheEntry(tree));
-		}
-		return tree;
+		return buildFileTree(projectId);
 	}
 
 	private List<FileTreeNode> buildFileTree(Long projectId) {
@@ -254,9 +229,6 @@ public class FileServiceImpl implements FileService {
 
 		sortTree(rootNodes.values());
 		return new ArrayList<>(rootNodes.values());
-	}
-
-	private record FileTreeCacheEntry(List<FileTreeNode> nodes) {
 	}
 
 	@Override
