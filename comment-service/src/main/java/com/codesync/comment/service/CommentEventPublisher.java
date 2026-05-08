@@ -20,6 +20,8 @@ public class CommentEventPublisher {
 	private final String notificationRoutingKey;
 	private final String commentCreatedRoutingKey;
 	private final String commentResolvedRoutingKey;
+	@Value("${codesync.rabbit.enabled:false}")
+	private boolean rabbitEnabled;
 
 	public CommentEventPublisher(RabbitTemplate rabbitTemplate,
 			@Value("${codesync.rabbit.exchange:codesync.events}") String exchangeName,
@@ -62,6 +64,10 @@ public class CommentEventPublisher {
 	}
 
 	private void publishAfterCommit(String routingKey, Object payload) {
+		if (!rabbitEnabled) {
+			return;
+		}
+
 		if (!TransactionSynchronizationManager.isSynchronizationActive()) {
 			rabbitTemplate.convertAndSend(exchangeName, routingKey, payload);
 			return;

@@ -17,6 +17,8 @@ public class FileEventPublisher {
 	private final RabbitTemplate rabbitTemplate;
 	private final String exchangeName;
 	private final String fileUpdatedRoutingKey;
+	@Value("${codesync.rabbit.enabled:false}")
+	private boolean rabbitEnabled;
 
 	public FileEventPublisher(RabbitTemplate rabbitTemplate,
 			@Value("${codesync.rabbit.exchange:codesync.events}") String exchangeName,
@@ -41,6 +43,10 @@ public class FileEventPublisher {
 	}
 
 	private void publishAfterCommit(FileUpdatedEvent event) {
+		if (!rabbitEnabled) {
+			return;
+		}
+
 		if (!TransactionSynchronizationManager.isSynchronizationActive()) {
 			rabbitTemplate.convertAndSend(exchangeName, fileUpdatedRoutingKey, event);
 			return;

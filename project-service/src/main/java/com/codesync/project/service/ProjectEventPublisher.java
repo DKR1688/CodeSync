@@ -21,6 +21,8 @@ public class ProjectEventPublisher {
 	private final String notificationRoutingKey;
 	private final String projectCreatedRoutingKey;
 	private final String projectMemberAddedRoutingKey;
+	@Value("${codesync.rabbit.enabled:false}")
+	private boolean rabbitEnabled;
 
 	public ProjectEventPublisher(RabbitTemplate rabbitTemplate,
 			@Value("${codesync.rabbit.exchange}") String exchangeName,
@@ -69,6 +71,10 @@ public class ProjectEventPublisher {
 	}
 
 	private void publishAfterCommit(String routingKey, Object payload) {
+		if (!rabbitEnabled) {
+			return;
+		}
+
 		if (!TransactionSynchronizationManager.isSynchronizationActive()) {
 			rabbitTemplate.convertAndSend(exchangeName, routingKey, payload);
 			return;

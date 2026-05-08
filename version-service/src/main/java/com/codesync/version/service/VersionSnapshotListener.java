@@ -2,9 +2,11 @@ package com.codesync.version.service;
 
 import com.codesync.version.dto.FileUpdatedEvent;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 @Component
+@ConditionalOnProperty(name = "codesync.rabbit.enabled", havingValue = "true")
 public class VersionSnapshotListener {
 
 	private final VersionServiceImpl versionService;
