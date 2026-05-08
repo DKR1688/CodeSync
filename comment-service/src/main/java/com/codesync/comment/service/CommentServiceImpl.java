@@ -1,5 +1,6 @@
 package com.codesync.comment.service;
 
+import com.codesync.comment.client.NotificationClient;
 import com.codesync.comment.client.AuthUserClient;
 import com.codesync.comment.dto.NotificationRequest;
 import com.codesync.comment.entity.Comment;
@@ -26,16 +27,22 @@ public class CommentServiceImpl implements CommentService {
 
 	private final CommentRepository repository;
 	private final AuthUserClient authUserClient;
+	private final NotificationClient notificationClient;
 	private final CommentEventPublisher eventPublisher;
 	private final boolean notificationsEnabled;
+	private final boolean rabbitEnabled;
 
 	public CommentServiceImpl(CommentRepository repository, AuthUserClient authUserClient,
+			NotificationClient notificationClient,
 			CommentEventPublisher eventPublisher,
-			@Value("${comment.mentions.notifications-enabled:true}") boolean notificationsEnabled) {
+			@Value("${comment.mentions.notifications-enabled:true}") boolean notificationsEnabled,
+			@Value("${codesync.rabbit.enabled:false}") boolean rabbitEnabled) {
 		this.repository = repository;
 		this.authUserClient = authUserClient;
+		this.notificationClient = notificationClient;
 		this.eventPublisher = eventPublisher;
 		this.notificationsEnabled = notificationsEnabled;
+		this.rabbitEnabled = rabbitEnabled;
 	}
 
 	@Override
@@ -190,8 +197,14 @@ public class CommentServiceImpl implements CommentService {
 		for (String username : extractMentionedUsernames(comment.getContent())) {
 			authUserClient.findActiveUserByUsername(username, authorizationHeader)
 					.filter(user -> !comment.getAuthorId().equals(user.getUserId()))
-					.ifPresent(user -> eventPublisher.publishMentionNotification(
-							buildMentionNotification(comment, user.getUserId())));
+					.ifPresent(user -> {
+						NotificationRequest notification = buildMentionNotification(comment, user.getUserId());
+						if (rabbitEnabled) {
+							eventPublisher.publishMentionNotification(notification);
+							return;
+						}
+						notificationClient.send(notification, authorizationHeader);
+					});
 		}
 	}
 

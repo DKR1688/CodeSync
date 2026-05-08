@@ -230,7 +230,7 @@ public class ProjectServiceImpl implements ProjectService {
 			@CacheEvict(value = PROJECT_BY_ID_CACHE, allEntries = true),
 			@CacheEvict(value = PUBLIC_PROJECTS_CACHE, allEntries = true),
 			@CacheEvict(value = PROJECT_MEMBERS_CACHE, allEntries = true) })
-	public void addMember(Long projectId, Long userId, Long actorId) {
+	public void addMember(Long projectId, Long userId, Long actorId, String authorizationHeader) {
 		validatePositiveId(projectId, "Project id");
 		validatePositiveId(userId, "Member user id");
 		validatePositiveId(actorId, "Actor user id");
@@ -241,11 +241,11 @@ public class ProjectServiceImpl implements ProjectService {
 		}
 		project.getMemberUserIds().add(userId);
 		Project saved = repository.save(project);
-		publishMemberAdded(toDTO(saved != null ? saved : project), userId, actorId);
+		publishMemberAdded(toDTO(saved != null ? saved : project), userId, actorId, authorizationHeader);
 	}
 
 	public void addMember(Long projectId, Long userId) {
-		addMember(projectId, userId, userId);
+		addMember(projectId, userId, userId, null);
 	}
 
 	@Override
@@ -302,9 +302,9 @@ public class ProjectServiceImpl implements ProjectService {
 		}
 	}
 
-	private void publishMemberAdded(ProjectDTO project, Long userId, Long actorId) {
+	private void publishMemberAdded(ProjectDTO project, Long userId, Long actorId, String authorizationHeader) {
 		if (eventPublisher != null) {
-			eventPublisher.publishMemberAdded(project, userId, actorId);
+			eventPublisher.publishMemberAdded(project, userId, actorId, authorizationHeader);
 		}
 	}
 

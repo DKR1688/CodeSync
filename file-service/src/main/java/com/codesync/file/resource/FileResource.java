@@ -110,7 +110,8 @@ public class FileResource {
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
 		CodeFile file = service.getFileById(id);
 		verifyWriteAccess(file.getProjectId(), authorizationHeader);
-		return service.updateFileContent(id, request != null ? request.getContent() : null, requireCurrentUserId(authentication));
+		return service.updateFileContent(id, request != null ? request.getContent() : null,
+				requireCurrentUserId(authentication), authorizationHeader);
 	}
 
 	@PutMapping("/{id}/rename")

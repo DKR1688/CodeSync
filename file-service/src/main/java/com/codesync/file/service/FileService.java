@@ -15,7 +15,7 @@ public interface FileService {
 
 	String getFileContent(Long fileId);
 
-	CodeFile updateFileContent(Long fileId, String content, Long editorId);
+	CodeFile updateFileContent(Long fileId, String content, Long editorId, String authorizationHeader);
 
 	CodeFile renameFile(Long fileId, String newName);
 

@@ -91,7 +91,7 @@ public class FileServiceImpl implements FileService {
 	}
 
 	@Override
-	public CodeFile updateFileContent(Long fileId, String content, Long editorId) {
+	public CodeFile updateFileContent(Long fileId, String content, Long editorId, String authorizationHeader) {
 		validatePositiveId(editorId, "Editor user id");
 		CodeFile file = requireActiveFile(fileId);
 		if (file.isFolder()) {
@@ -104,7 +104,7 @@ public class FileServiceImpl implements FileService {
 		file.setLastEditedBy(editorId);
 		CodeFile saved = repository.save(file);
 		if (eventPublisher != null) {
-			eventPublisher.publishFileUpdated(saved);
+			eventPublisher.publishFileUpdated(saved, authorizationHeader);
 		}
 		return saved;
 	}

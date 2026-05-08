@@ -1,5 +1,6 @@
 package com.codesync.project.service;
 
+import com.codesync.project.client.NotificationServiceClient;
 import com.codesync.project.dto.NotificationCommand;
 import com.codesync.project.dto.ProjectDTO;
 import com.codesync.project.dto.ProjectEvent;
@@ -17,6 +18,7 @@ import java.util.UUID;
 public class ProjectEventPublisher {
 
 	private final RabbitTemplate rabbitTemplate;
+	private final NotificationServiceClient notificationServiceClient;
 	private final String exchangeName;
 	private final String notificationRoutingKey;
 	private final String projectCreatedRoutingKey;
@@ -25,11 +27,13 @@ public class ProjectEventPublisher {
 	private boolean rabbitEnabled;
 
 	public ProjectEventPublisher(RabbitTemplate rabbitTemplate,
+			NotificationServiceClient notificationServiceClient,
 			@Value("${codesync.rabbit.exchange}") String exchangeName,
 			@Value("${codesync.rabbit.routing-key.notification-send}") String notificationRoutingKey,
 			@Value("${codesync.rabbit.routing-key.project-created}") String projectCreatedRoutingKey,
 			@Value("${codesync.rabbit.routing-key.project-member-added}") String projectMemberAddedRoutingKey) {
 		this.rabbitTemplate = rabbitTemplate;
+		this.notificationServiceClient = notificationServiceClient;
 		this.exchangeName = exchangeName;
 		this.notificationRoutingKey = notificationRoutingKey;
 		this.projectCreatedRoutingKey = projectCreatedRoutingKey;
@@ -48,7 +52,7 @@ public class ProjectEventPublisher {
 		publishAfterCommit(projectCreatedRoutingKey, event);
 	}
 
-	public void publishMemberAdded(ProjectDTO project, Long memberUserId, Long actorId) {
+	public void publishMemberAdded(ProjectDTO project, Long memberUserId, Long actorId, String authorizationHeader) {
 		ProjectMemberEvent event = new ProjectMemberEvent();
 		event.setEventId(UUID.randomUUID());
 		event.setOccurredAt(Instant.now());
@@ -56,8 +60,6 @@ public class ProjectEventPublisher {
 		event.setMemberUserId(memberUserId);
 		event.setActorId(actorId);
 		event.setProjectName(project.getName());
-		publishAfterCommit(projectMemberAddedRoutingKey, event);
-
 		NotificationCommand notification = new NotificationCommand();
 		notification.setRecipientId(memberUserId);
 		notification.setActorId(actorId);
@@ -67,7 +69,28 @@ public class ProjectEventPublisher {
 		notification.setRelatedId(String.valueOf(project.getProjectId()));
 		notification.setRelatedType("PROJECT");
 		notification.setDeepLinkUrl("/projects/" + project.getProjectId());
-		publishAfterCommit(notificationRoutingKey, notification);
+
+		if (rabbitEnabled) {
+			publishAfterCommit(projectMemberAddedRoutingKey, event);
+			publishAfterCommit(notificationRoutingKey, notification);
+			return;
+		}
+
+		dispatchNotificationAfterCommit(notification, authorizationHeader);
+	}
+
+	private void dispatchNotificationAfterCommit(NotificationCommand notification, String authorizationHeader) {
+		if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+			notificationServiceClient.send(notification, authorizationHeader);
+			return;
+		}
+
+		TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+			@Override
+			public void afterCommit() {
+				notificationServiceClient.send(notification, authorizationHeader);
+			}
+		});
 	}
 
 	private void publishAfterCommit(String routingKey, Object payload) {

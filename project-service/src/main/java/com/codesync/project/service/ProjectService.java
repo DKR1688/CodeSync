@@ -35,7 +35,7 @@ public interface ProjectService {
 
 	List<ProjectDTO> getProjectsByLanguage(String language);
 
-	void addMember(Long projectId, Long userId, Long actorId);
+	void addMember(Long projectId, Long userId, Long actorId, String authorizationHeader);
 
 	void removeMember(Long projectId, Long userId);
 

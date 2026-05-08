@@ -229,10 +229,11 @@ public class ProjectResource {
 
 	@PostMapping("/{id}/members/{userId}")
 	@Operation(summary = "Add member", tags = { "11. Add Member" })
-	public ResponseEntity<Void> addMember(@PathVariable Long id, @PathVariable Long userId, Authentication authentication) {
+	public ResponseEntity<Void> addMember(@PathVariable Long id, @PathVariable Long userId, Authentication authentication,
+			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
 		assertOwnerOrAdmin(service.getProjectById(id), authentication);
 		authServiceClient.assertUserExists(userId);
-		service.addMember(id, userId, requireCurrentUserId(authentication));
+		service.addMember(id, userId, requireCurrentUserId(authentication), authorizationHeader);
 		return ResponseEntity.noContent().build();
 	}
 

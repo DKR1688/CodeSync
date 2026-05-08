@@ -1,5 +1,7 @@
 package com.codesync.file.service;
 
+import com.codesync.file.client.VersionServiceClient;
+import com.codesync.file.dto.CreateSnapshotRequest;
 import com.codesync.file.dto.FileUpdatedEvent;
 import com.codesync.file.entity.CodeFile;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -15,20 +17,23 @@ import java.util.UUID;
 public class FileEventPublisher {
 
 	private final RabbitTemplate rabbitTemplate;
+	private final VersionServiceClient versionServiceClient;
 	private final String exchangeName;
 	private final String fileUpdatedRoutingKey;
 	@Value("${codesync.rabbit.enabled:false}")
 	private boolean rabbitEnabled;
 
 	public FileEventPublisher(RabbitTemplate rabbitTemplate,
+			VersionServiceClient versionServiceClient,
 			@Value("${codesync.rabbit.exchange:codesync.events}") String exchangeName,
 			@Value("${codesync.rabbit.routing-key.file-updated:file.updated}") String fileUpdatedRoutingKey) {
 		this.rabbitTemplate = rabbitTemplate;
+		this.versionServiceClient = versionServiceClient;
 		this.exchangeName = exchangeName;
 		this.fileUpdatedRoutingKey = fileUpdatedRoutingKey;
 	}
 
-	public void publishFileUpdated(CodeFile file) {
+	public void publishFileUpdated(CodeFile file, String authorizationHeader) {
 		FileUpdatedEvent event = new FileUpdatedEvent();
 		event.setEventId(UUID.randomUUID());
 		event.setOccurredAt(Instant.now());
@@ -39,24 +44,39 @@ public class FileEventPublisher {
 		event.setContent(file.getContent());
 		event.setMessage("Auto snapshot after updating " + file.getPath());
 		event.setBranch("main");
-		publishAfterCommit(event);
+		publishAfterCommit(event, authorizationHeader);
 	}
 
-	private void publishAfterCommit(FileUpdatedEvent event) {
-		if (!rabbitEnabled) {
-			return;
-		}
-
+	private void publishAfterCommit(FileUpdatedEvent event, String authorizationHeader) {
 		if (!TransactionSynchronizationManager.isSynchronizationActive()) {
-			rabbitTemplate.convertAndSend(exchangeName, fileUpdatedRoutingKey, event);
+			dispatch(event, authorizationHeader);
 			return;
 		}
 
 		TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
 			@Override
 			public void afterCommit() {
-				rabbitTemplate.convertAndSend(exchangeName, fileUpdatedRoutingKey, event);
+				dispatch(event, authorizationHeader);
 			}
 		});
+	}
+
+	private void dispatch(FileUpdatedEvent event, String authorizationHeader) {
+		if (rabbitEnabled) {
+			rabbitTemplate.convertAndSend(exchangeName, fileUpdatedRoutingKey, event);
+			return;
+		}
+
+		versionServiceClient.createSnapshot(toCreateSnapshotRequest(event), authorizationHeader);
+	}
+
+	private CreateSnapshotRequest toCreateSnapshotRequest(FileUpdatedEvent event) {
+		CreateSnapshotRequest request = new CreateSnapshotRequest();
+		request.setProjectId(event.getProjectId());
+		request.setFileId(event.getFileId());
+		request.setContent(event.getContent());
+		request.setMessage(event.getMessage());
+		request.setBranch(event.getBranch());
+		return request;
 	}
 }
