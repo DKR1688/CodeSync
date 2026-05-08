@@ -34,6 +34,9 @@ class FileServiceImplTest {
 	@Mock
 	private FileRepository repository;
 
+	@Mock
+	private FileEventPublisher eventPublisher;
+
 	@InjectMocks
 	private FileServiceImpl service;
 
@@ -90,11 +93,12 @@ class FileServiceImplTest {
 		when(repository.findByFileId(1L)).thenReturn(Optional.of(file));
 		when(repository.save(any(CodeFile.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-		CodeFile updated = service.updateFileContent(1L, "System.out.println(\"hi\");", 25L);
+		CodeFile updated = service.updateFileContent(1L, "System.out.println(\"hi\");", 25L, "Bearer editor-token");
 
 		assertEquals("System.out.println(\"hi\");", updated.getContent());
 		assertEquals(25L, updated.getLastEditedBy());
 		assertEquals(25, updated.getSize());
+		verify(eventPublisher).publishFileUpdated(updated, "Bearer editor-token");
 	}
 
 	@Test
