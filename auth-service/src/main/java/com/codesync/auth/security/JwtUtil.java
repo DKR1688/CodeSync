@@ -7,6 +7,7 @@ import io.jsonwebtoken.security.Keys;
 import com.codesync.auth.entity.User;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
@@ -21,17 +22,22 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class JwtUtil {
 
-	@Value("${jwt.secret}")
-	private String secret;
+	private static final String DEFAULT_SECRET = "mysupersecretkeymysupersecretkey1234567890";
 
-	@Value("${jwt.expiration}")
-	private long expiration;
+	private final Key signingKey;
+	private final long expiration;
 
 	private final Map<String, Date> revokedTokens = new ConcurrentHashMap<>();
 
+	public JwtUtil(
+			@Value("${jwt.secret:" + DEFAULT_SECRET + "}") String secret,
+			@Value("${jwt.expiration:86400000}") long expiration) {
+		this.signingKey = Keys.hmacShaKeyFor(hashSecret(resolveSecret(secret)));
+		this.expiration = expiration;
+	}
+
 	private Key getSigningKey() {
-		byte[] keyBytes = hashSecret(secret);
-		return Keys.hmacShaKeyFor(keyBytes);
+		return signingKey;
 	}
 
 	private byte[] hashSecret(String value) {
@@ -114,5 +120,9 @@ public class JwtUtil {
 				.build()
 				.parseClaimsJws(token)
 				.getBody();
+	}
+
+	private String resolveSecret(String configuredSecret) {
+		return StringUtils.hasText(configuredSecret) ? configuredSecret : DEFAULT_SECRET;
 	}
 }
