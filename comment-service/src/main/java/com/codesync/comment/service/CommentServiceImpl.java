@@ -211,7 +211,7 @@ public class CommentServiceImpl implements CommentService {
 	private NotificationRequest buildMentionNotification(Comment comment, Long recipientId) {
 		String relatedId = String.valueOf(comment.getCommentId());
 		String deepLink = "/projects/" + comment.getProjectId()
-				+ "/files/" + comment.getFileId()
+				+ "/editor/" + comment.getFileId()
 				+ "?commentId=" + comment.getCommentId();
 		return new NotificationRequest(recipientId, comment.getAuthorId(), "MENTION",
 				"You were mentioned in a code comment",

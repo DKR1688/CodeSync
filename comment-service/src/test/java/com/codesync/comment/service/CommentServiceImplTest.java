@@ -2,18 +2,26 @@ package com.codesync.comment.service;
 
 import com.codesync.comment.client.AuthUserClient;
 import com.codesync.comment.client.NotificationClient;
+import com.codesync.comment.dto.NotificationRequest;
+import com.codesync.comment.dto.UserSummary;
 import com.codesync.comment.entity.Comment;
 import com.codesync.comment.exception.InvalidCommentRequestException;
 import com.codesync.comment.repository.CommentRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.util.Optional;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -89,6 +97,29 @@ class CommentServiceImplTest {
 		assertThat(commentService.getByLine(20L, 7)).extracting(Comment::getContent)
 				.containsExactly("first", "second");
 		assertThat(commentService.getCommentCount(20L)).isEqualTo(3);
+	}
+
+	@Test
+	void addCommentSendsMentionNotificationWithEditorDeepLink() {
+		UserSummary mentionedUser = new UserSummary();
+		mentionedUser.setUserId(123L);
+		mentionedUser.setUsername("reviewer");
+		mentionedUser.setActive(true);
+		when(authUserClient.findActiveUserByUsername("reviewer", "Bearer token"))
+				.thenReturn(Optional.of(mentionedUser));
+
+		Comment saved = commentService.addComment(comment(null, "Please review this @reviewer", 9, 2, null),
+				"Bearer token");
+
+		ArgumentCaptor<NotificationRequest> notificationCaptor = ArgumentCaptor.forClass(NotificationRequest.class);
+		verify(notificationClient).send(notificationCaptor.capture(), eq("Bearer token"));
+		NotificationRequest notification = notificationCaptor.getValue();
+		assertThat(notification.getRecipientId()).isEqualTo(123L);
+		assertThat(notification.getActorId()).isEqualTo(99L);
+		assertThat(notification.getType()).isEqualTo("MENTION");
+		assertThat(notification.getRelatedId()).isEqualTo(String.valueOf(saved.getCommentId()));
+		assertThat(notification.getRelatedType()).isEqualTo("COMMENT");
+		assertThat(notification.getDeepLinkUrl()).isEqualTo("/projects/10/editor/20?commentId=" + saved.getCommentId());
 	}
 
 	private Comment comment(Long parentCommentId, String content, Integer lineNumber, Integer columnNumber,

@@ -10,6 +10,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
@@ -38,6 +39,7 @@ class CommentEventPublisherTest {
 				"notification.send",
 				"comment.created",
 				"comment.resolved");
+		ReflectionTestUtils.setField(publisher, "rabbitEnabled", true);
 
 		Comment comment = new Comment();
 		comment.setCommentId(10L);
@@ -78,6 +80,7 @@ class CommentEventPublisherTest {
 				"notification.send",
 				"comment.created",
 				"comment.resolved");
+		ReflectionTestUtils.setField(publisher, "rabbitEnabled", true);
 		NotificationRequest request = new NotificationRequest();
 		request.setRecipientId(77L);
 
