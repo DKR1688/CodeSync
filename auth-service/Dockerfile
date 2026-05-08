@@ -1,7 +1,9 @@
 FROM maven:3.9.9-eclipse-temurin-21 AS build
 WORKDIR /workspace
 
-COPY pom.xml .
+COPY pom.xml ./
+RUN mvn -B -ntp dependency:go-offline
+
 COPY src src
 
 RUN mvn -B -ntp -DskipTests package
@@ -11,6 +13,6 @@ WORKDIR /app
 
 COPY --from=build /workspace/target/*.jar app.jar
 
-EXPOSE 10000
+EXPOSE 8080
 
-CMD ["sh", "-c", "echo PORT_IS_$PORT && java -jar app.jar --server.port=${PORT:-10000} --server.address=0.0.0.0"]
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar /app/app.jar"]
