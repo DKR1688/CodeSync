@@ -1,5 +1,6 @@
 package com.codesync.project.service;
 
+import com.codesync.project.client.NotificationServiceClient;
 import com.codesync.project.dto.NotificationCommand;
 import com.codesync.project.dto.ProjectDTO;
 import com.codesync.project.dto.ProjectEvent;
@@ -12,10 +13,14 @@ import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
 class ProjectEventPublisherTest {
@@ -23,14 +28,19 @@ class ProjectEventPublisherTest {
 	@Mock
 	private RabbitTemplate rabbitTemplate;
 
+	@Mock
+	private NotificationServiceClient notificationServiceClient;
+
 	@Test
 	void publishProjectCreatedMapsProjectDetails() {
 		ProjectEventPublisher publisher = new ProjectEventPublisher(
 				rabbitTemplate,
+				notificationServiceClient,
 				"codesync.events",
 				"notification.send",
 				"project.created",
 				"project.member.added");
+		ReflectionTestUtils.setField(publisher, "rabbitEnabled", true);
 
 		ProjectDTO project = new ProjectDTO();
 		project.setProjectId(1L);
@@ -53,22 +63,25 @@ class ProjectEventPublisherTest {
 		assertThat(event.getName()).isEqualTo("Compiler");
 		assertThat(event.getLanguage()).isEqualTo("Java");
 		assertThat(event.getVisibility()).isEqualTo("PUBLIC");
+		verifyNoInteractions(notificationServiceClient);
 	}
 
 	@Test
 	void publishMemberAddedSendsMembershipEventAndNotification() {
 		ProjectEventPublisher publisher = new ProjectEventPublisher(
 				rabbitTemplate,
+				notificationServiceClient,
 				"codesync.events",
 				"notification.send",
 				"project.created",
 				"project.member.added");
+		ReflectionTestUtils.setField(publisher, "rabbitEnabled", true);
 
 		ProjectDTO project = new ProjectDTO();
 		project.setProjectId(11L);
 		project.setName("CodeSync");
 
-		publisher.publishMemberAdded(project, 42L, 7L);
+		publisher.publishMemberAdded(project, 42L, 7L, "Bearer test-token");
 
 		InOrder inOrder = inOrder(rabbitTemplate);
 		ArgumentCaptor<ProjectMemberEvent> memberEventCaptor = ArgumentCaptor.forClass(ProjectMemberEvent.class);
@@ -94,5 +107,26 @@ class ProjectEventPublisherTest {
 		assertThat(notification.getRelatedId()).isEqualTo("11");
 		assertThat(notification.getRelatedType()).isEqualTo("PROJECT");
 		assertThat(notification.getDeepLinkUrl()).isEqualTo("/projects/11");
+		verifyNoInteractions(notificationServiceClient);
+	}
+
+	@Test
+	void publishMemberAddedFallsBackToDirectNotificationWhenRabbitIsDisabled() {
+		ProjectEventPublisher publisher = new ProjectEventPublisher(
+				rabbitTemplate,
+				notificationServiceClient,
+				"codesync.events",
+				"notification.send",
+				"project.created",
+				"project.member.added");
+
+		ProjectDTO project = new ProjectDTO();
+		project.setProjectId(11L);
+		project.setName("CodeSync");
+
+		publisher.publishMemberAdded(project, 42L, 7L, "Bearer direct-token");
+
+		verifyNoInteractions(rabbitTemplate);
+		verify(notificationServiceClient).send(any(NotificationCommand.class), anyString());
 	}
 }
