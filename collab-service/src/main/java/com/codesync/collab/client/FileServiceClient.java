@@ -32,7 +32,7 @@ public class FileServiceClient {
 	public CodeFileDTO getFileById(Long fileId, String authorizationHeader) {
 		try {
 			return getFileById(discoveryRestClient, fileId, authorizationHeader);
-		} catch (IllegalStateException ex) {
+		} catch (RuntimeException ex) {
 			return getFileById(directRestClient, fileId, authorizationHeader);
 		}
 	}
@@ -68,8 +68,8 @@ public class FileServiceClient {
 		try {
 			updateContent(discoveryRestClient, fileId, content, authorizationHeader);
 			return;
-		} catch (IllegalStateException ex) {
-			// Discovery not ready, fall back to the configured direct URL.
+		} catch (RuntimeException ex) {
+			// Discovery can fail for more than just missing registration in deployed environments.
 		}
 		updateContent(directRestClient, fileId, content, authorizationHeader);
 	}
