@@ -17,8 +17,10 @@ import org.springframework.web.client.RestClientResponseException;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Component
 public class FileServiceClient {
@@ -27,6 +29,7 @@ public class FileServiceClient {
 	private static final String RENDER_FALLBACK_BASE_URL = "https://codesync-file-service.onrender.com";
 
 	private final List<RestClient> restClients;
+	private final Set<String> configuredBaseUrls;
 
 	public FileServiceClient(@LoadBalanced RestClient.Builder loadBalancedRestClientBuilder,
 			RestClient.Builder restClientBuilder,
@@ -35,14 +38,19 @@ public class FileServiceClient {
 			@Value("${codesync.http.connect-timeout-seconds:3}") int connectTimeoutSeconds,
 			@Value("${codesync.http.read-timeout-seconds:8}") int readTimeoutSeconds) {
 		this.restClients = new ArrayList<>();
-		this.restClients.add(buildClient(loadBalancedRestClientBuilder, DISCOVERY_BASE_URL,
-				connectTimeoutSeconds, readTimeoutSeconds));
-		this.restClients.add(buildClient(restClientBuilder, fileServiceUrl,
-				connectTimeoutSeconds, readTimeoutSeconds));
-		if (shouldAddRenderFallback(fileServiceUrl, deployedPort)) {
-			this.restClients.add(buildClient(restClientBuilder, RENDER_FALLBACK_BASE_URL,
-					connectTimeoutSeconds, readTimeoutSeconds));
+		this.configuredBaseUrls = new HashSet<>();
+		if (shouldPreferDirectClient(fileServiceUrl, deployedPort)) {
+			addClient(restClientBuilder, fileServiceUrl, connectTimeoutSeconds, readTimeoutSeconds);
+			addRenderFallbackIfNeeded(restClientBuilder, fileServiceUrl, deployedPort, connectTimeoutSeconds,
+					readTimeoutSeconds);
+			addClient(loadBalancedRestClientBuilder, DISCOVERY_BASE_URL, connectTimeoutSeconds, readTimeoutSeconds);
+			return;
 		}
+
+		addClient(loadBalancedRestClientBuilder, DISCOVERY_BASE_URL, connectTimeoutSeconds, readTimeoutSeconds);
+		addClient(restClientBuilder, fileServiceUrl, connectTimeoutSeconds, readTimeoutSeconds);
+		addRenderFallbackIfNeeded(restClientBuilder, fileServiceUrl, deployedPort, connectTimeoutSeconds,
+				readTimeoutSeconds);
 	}
 
 	public CodeFileDTO getFileById(Long fileId, String authorizationHeader) {
@@ -144,10 +152,31 @@ public class FileServiceClient {
 		return builder.requestFactory(requestFactory).baseUrl(baseUrl).build();
 	}
 
+	private void addClient(RestClient.Builder builder, String baseUrl, int connectTimeoutSeconds,
+			int readTimeoutSeconds) {
+		if (!StringUtils.hasText(baseUrl) || containsBaseUrl(baseUrl)) {
+			return;
+		}
+		configuredBaseUrls.add(baseUrl.trim());
+		restClients.add(buildClient(builder, baseUrl, connectTimeoutSeconds, readTimeoutSeconds));
+	}
+
+	private void addRenderFallbackIfNeeded(RestClient.Builder builder, String configuredUrl, String deployedPort,
+			int connectTimeoutSeconds, int readTimeoutSeconds) {
+		if (!shouldAddRenderFallback(configuredUrl, deployedPort)) {
+			return;
+		}
+		addClient(builder, RENDER_FALLBACK_BASE_URL, connectTimeoutSeconds, readTimeoutSeconds);
+	}
+
 	private boolean shouldAddRenderFallback(String configuredUrl, String deployedPort) {
 		return StringUtils.hasText(deployedPort)
 				&& !"8084".equals(deployedPort)
 				&& isLocalhostUrl(configuredUrl);
+	}
+
+	private boolean shouldPreferDirectClient(String configuredUrl, String deployedPort) {
+		return StringUtils.hasText(deployedPort) && StringUtils.hasText(configuredUrl) && !isLocalhostUrl(configuredUrl);
 	}
 
 	private boolean isLocalhostUrl(String url) {
@@ -156,6 +185,10 @@ public class FileServiceClient {
 		}
 		String normalized = url.trim().toLowerCase();
 		return normalized.contains("localhost") || normalized.contains("127.0.0.1");
+	}
+
+	private boolean containsBaseUrl(String baseUrl) {
+		return configuredBaseUrls.contains(baseUrl.trim());
 	}
 
 	private void copyAuthorizationHeader(HttpHeaders headers, String authorizationHeader) {
