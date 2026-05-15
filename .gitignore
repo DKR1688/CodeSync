@@ -1,0 +1,19 @@
+# IDE metadata
+.project
+.classpath
+.settings/
+.factorypath
+**/bin/
+
+# Build output
+**/target/
+
+# Local runtime data
+execution-service/runtime/
+
+# Local environment files
+**/.env
+
+# OS files
+.DS_Store
+Thumbs.db
