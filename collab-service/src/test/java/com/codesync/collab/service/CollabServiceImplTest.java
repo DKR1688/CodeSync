@@ -119,6 +119,21 @@ class CollabServiceImplTest {
 	}
 
 	@Test
+	void activeSessionListingsOmitFullFileContent() {
+		CollabSession session = activeSession();
+
+		when(sessionRepository.findByStatusOrderByCreatedAtDesc(SessionStatus.ACTIVE)).thenReturn(List.of(session));
+		when(participantRepository.countBySessionSessionIdAndLeftAtIsNull(session.getSessionId())).thenReturn(1L);
+
+		List<CollabSessionDTO> sessions = service.getActiveSessions();
+
+		assertEquals(1, sessions.size());
+		assertEquals("session-1", sessions.get(0).getSessionId());
+		assertEquals(1L, sessions.get(0).getParticipantCount());
+		assertEquals(null, sessions.get(0).getCurrentContent());
+	}
+
+	@Test
 	void joinSessionAddsEditorParticipantAndBroadcastsPresence() {
 		CollabSession session = activeSession();
 		JoinSessionRequest request = new JoinSessionRequest();

@@ -138,7 +138,7 @@ public class CollabServiceImpl implements CollabService {
 		validatePositiveId(projectId, "Project id");
 		assertCanReadProject(projectId, authorizationHeader);
 		return sessionRepository.findByProjectIdOrderByCreatedAtDesc(projectId).stream()
-				.map(this::toSessionDTO)
+				.map(this::toSessionSummaryDTO)
 				.toList();
 	}
 
@@ -146,7 +146,7 @@ public class CollabServiceImpl implements CollabService {
 	@Transactional(readOnly = true)
 	public List<CollabSessionDTO> getActiveSessions() {
 		return sessionRepository.findByStatusOrderByCreatedAtDesc(SessionStatus.ACTIVE).stream()
-				.map(this::toSessionDTO)
+				.map(this::toSessionSummaryDTO)
 				.toList();
 	}
 
@@ -157,7 +157,7 @@ public class CollabServiceImpl implements CollabService {
 		CodeFileDTO file = fileServiceClient.getFileById(fileId, authorizationHeader);
 		assertCanReadProject(file.getProjectId(), authorizationHeader);
 		return sessionRepository.findFirstByFileIdAndStatusOrderByCreatedAtDesc(fileId, SessionStatus.ACTIVE)
-				.map(this::toSessionDTO)
+				.map(this::toSessionSummaryDTO)
 				.orElse(null);
 	}
 
@@ -476,6 +476,14 @@ public class CollabServiceImpl implements CollabService {
 	}
 
 	private CollabSessionDTO toSessionDTO(CollabSession session) {
+		return toSessionDTO(session, true);
+	}
+
+	private CollabSessionDTO toSessionSummaryDTO(CollabSession session) {
+		return toSessionDTO(session, false);
+	}
+
+	private CollabSessionDTO toSessionDTO(CollabSession session, boolean includeCurrentContent) {
 		CollabSessionDTO dto = new CollabSessionDTO();
 		dto.setSessionId(session.getSessionId());
 		dto.setProjectId(session.getProjectId());
@@ -483,7 +491,7 @@ public class CollabServiceImpl implements CollabService {
 		dto.setOwnerId(session.getOwnerId());
 		dto.setStatus(session.getStatus());
 		dto.setLanguage(session.getLanguage());
-		dto.setCurrentContent(session.getCurrentContent());
+		dto.setCurrentContent(includeCurrentContent ? session.getCurrentContent() : null);
 		dto.setCurrentRevision(session.getCurrentRevision());
 		dto.setCreatedAt(session.getCreatedAt());
 		dto.setLastActivityAt(session.getLastActivityAt());
