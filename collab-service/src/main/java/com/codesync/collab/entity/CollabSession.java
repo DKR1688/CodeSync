@@ -43,7 +43,7 @@ public class CollabSession {
 	private String currentContent = "";
 
 	@Column(nullable = false)
-	private int currentRevision = 0;
+	private Integer currentRevision = 0;
 
 	@Column(nullable = false, updatable = false)
 	private LocalDateTime createdAt;
@@ -54,16 +54,16 @@ public class CollabSession {
 	private LocalDateTime endedAt;
 
 	@Column(nullable = false)
-	private int maxParticipants = 10;
+	private Integer maxParticipants = 10;
 
 	@Column(nullable = false)
-	private boolean passwordProtected = false;
+	private Boolean passwordProtected = false;
 
 	@Column(length = 255)
 	private String sessionPasswordHash;
 
 	@Version
-	private long version;
+	private Long version;
 
 	@PrePersist
 	public void onCreate() {
@@ -132,7 +132,7 @@ public class CollabSession {
 	}
 
 	public String getCurrentContent() {
-		return currentContent;
+		return currentContent == null ? "" : currentContent;
 	}
 
 	public void setCurrentContent(String currentContent) {
@@ -140,7 +140,7 @@ public class CollabSession {
 	}
 
 	public int getCurrentRevision() {
-		return currentRevision;
+		return currentRevision == null ? 0 : currentRevision;
 	}
 
 	public void setCurrentRevision(int currentRevision) {
@@ -172,7 +172,7 @@ public class CollabSession {
 	}
 
 	public int getMaxParticipants() {
-		return maxParticipants;
+		return maxParticipants == null ? 10 : maxParticipants;
 	}
 
 	public void setMaxParticipants(int maxParticipants) {
@@ -180,7 +180,7 @@ public class CollabSession {
 	}
 
 	public boolean isPasswordProtected() {
-		return passwordProtected;
+		return Boolean.TRUE.equals(passwordProtected);
 	}
 
 	public void setPasswordProtected(boolean passwordProtected) {
@@ -193,5 +193,26 @@ public class CollabSession {
 
 	public void setSessionPasswordHash(String sessionPasswordHash) {
 		this.sessionPasswordHash = sessionPasswordHash;
+	}
+
+	public void applyLegacyDefaults() {
+		if (currentContent == null) {
+			currentContent = "";
+		}
+		if (currentRevision == null) {
+			currentRevision = 0;
+		}
+		if (lastActivityAt == null) {
+			lastActivityAt = createdAt != null ? createdAt : LocalDateTime.now();
+		}
+		if (maxParticipants == null) {
+			maxParticipants = 10;
+		}
+		if (passwordProtected == null) {
+			passwordProtected = false;
+		}
+		if (version == null) {
+			version = 0L;
+		}
 	}
 }

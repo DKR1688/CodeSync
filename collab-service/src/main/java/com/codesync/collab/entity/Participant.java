@@ -41,16 +41,16 @@ public class Participant {
 	private LocalDateTime leftAt;
 
 	@Column(nullable = false)
-	private int cursorLine = 1;
+	private Integer cursorLine = 1;
 
 	@Column(nullable = false)
-	private int cursorCol = 1;
+	private Integer cursorCol = 1;
 
 	@Column(nullable = false)
-	private int selectionEndLine = 1;
+	private Integer selectionEndLine = 1;
 
 	@Column(nullable = false)
-	private int selectionEndCol = 1;
+	private Integer selectionEndCol = 1;
 
 	@Column(nullable = false, length = 20)
 	private String color;
@@ -115,7 +115,7 @@ public class Participant {
 	}
 
 	public int getCursorLine() {
-		return cursorLine;
+		return cursorLine == null ? 1 : cursorLine;
 	}
 
 	public void setCursorLine(int cursorLine) {
@@ -123,7 +123,7 @@ public class Participant {
 	}
 
 	public int getCursorCol() {
-		return cursorCol;
+		return cursorCol == null ? 1 : cursorCol;
 	}
 
 	public void setCursorCol(int cursorCol) {
@@ -131,7 +131,7 @@ public class Participant {
 	}
 
 	public int getSelectionEndLine() {
-		return selectionEndLine;
+		return selectionEndLine == null ? 1 : selectionEndLine;
 	}
 
 	public void setSelectionEndLine(int selectionEndLine) {
@@ -139,7 +139,7 @@ public class Participant {
 	}
 
 	public int getSelectionEndCol() {
-		return selectionEndCol;
+		return selectionEndCol == null ? 1 : selectionEndCol;
 	}
 
 	public void setSelectionEndCol(int selectionEndCol) {
@@ -152,5 +152,23 @@ public class Participant {
 
 	public void setColor(String color) {
 		this.color = color;
+	}
+
+	public void applyLegacyDefaults() {
+		if (cursorLine == null) {
+			cursorLine = 1;
+		}
+		if (cursorCol == null) {
+			cursorCol = 1;
+		}
+		if (selectionEndLine == null) {
+			selectionEndLine = cursorLine;
+		}
+		if (selectionEndCol == null) {
+			selectionEndCol = cursorCol;
+		}
+		if (color == null || color.isBlank()) {
+			color = "#2563EB";
+		}
 	}
 }
