@@ -42,12 +42,13 @@ public class DockerSandboxRunner implements SandboxRunner {
 
 	@Override
 	public SandboxExecutionResult run(ExecutionJob job, SupportedLanguage language, Consumer<String> stdoutConsumer) {
-		if (!dockerEnabled) {
-			return new SandboxExecutionResult(ExecutionStatus.FAILED, "",
-					"Docker sandbox execution is disabled in this environment.", null,
-					0, 0);
-		}
+		return dockerEnabled
+				? runInDocker(job, language, stdoutConsumer)
+				: runLocally(job, language, stdoutConsumer);
+	}
 
+	private SandboxExecutionResult runInDocker(ExecutionJob job, SupportedLanguage language,
+			Consumer<String> stdoutConsumer) {
 		String imagePreparationError = ensureImageAvailable(language.getDockerImage());
 		if (imagePreparationError != null) {
 			return new SandboxExecutionResult(ExecutionStatus.FAILED, "",
@@ -100,6 +101,65 @@ public class DockerSandboxRunner implements SandboxRunner {
 		} catch (IOException ex) {
 			return new SandboxExecutionResult(ExecutionStatus.FAILED, "",
 					"Unable to start Docker sandbox: " + ex.getMessage(), null, elapsedMillis(started), 0);
+		} catch (InterruptedException ex) {
+			Thread.currentThread().interrupt();
+			return new SandboxExecutionResult(ExecutionStatus.CANCELLED, "", "Execution worker was interrupted.",
+					null, elapsedMillis(started), 0);
+		} finally {
+			streamExecutor.shutdownNow();
+			processManager.complete(job.getJobId());
+			deleteDirectory(workDir);
+		}
+	}
+
+	private SandboxExecutionResult runLocally(ExecutionJob job, SupportedLanguage language,
+			Consumer<String> stdoutConsumer) {
+		long started = System.nanoTime();
+		Path workDir = null;
+		ExecutorService streamExecutor = Executors.newFixedThreadPool(2);
+		try {
+			Files.createDirectories(workspaceRoot);
+			workDir = Files.createTempDirectory(workspaceRoot, "codesync-exec-");
+			String sourceFileName = resolveSourceFileName(job, language);
+			Files.writeString(workDir.resolve(sourceFileName),
+					job.getSourceCode() == null ? "" : job.getSourceCode(), StandardCharsets.UTF_8);
+
+			Process process = new ProcessBuilder(buildLocalCommand(language, sourceFileName))
+					.directory(workDir.toFile())
+					.redirectErrorStream(false)
+					.start();
+			processManager.register(job.getJobId(), process);
+
+			Future<String> stdoutFuture = streamExecutor.submit(capture(process.inputReader(StandardCharsets.UTF_8),
+					stdoutConsumer));
+			Future<String> stderrFuture = streamExecutor.submit(capture(process.errorReader(StandardCharsets.UTF_8),
+					null));
+
+			writeStdin(process, job.getStdin());
+
+			boolean finished = process.waitFor(job.getTimeLimitSeconds(), TimeUnit.SECONDS);
+			if (!finished) {
+				process.destroyForcibly();
+				String stdout = getCaptured(stdoutFuture);
+				String stderr = appendLine(getCaptured(stderrFuture), "Execution timed out after "
+						+ job.getTimeLimitSeconds() + " seconds.");
+				return new SandboxExecutionResult(ExecutionStatus.TIMED_OUT, stdout, stderr, null,
+						elapsedMillis(started), 0);
+			}
+
+			String stdout = getCaptured(stdoutFuture);
+			String stderr = getCaptured(stderrFuture);
+			if (processManager.isCancelRequested(job.getJobId())) {
+				return new SandboxExecutionResult(ExecutionStatus.CANCELLED, stdout,
+						appendLine(stderr, "Execution was cancelled."), null, elapsedMillis(started), 0);
+			}
+
+			int exitCode = process.exitValue();
+			ExecutionStatus status = exitCode == 0 ? ExecutionStatus.COMPLETED : ExecutionStatus.FAILED;
+			return new SandboxExecutionResult(status, stdout, stderr, exitCode, elapsedMillis(started), 0);
+		} catch (IOException ex) {
+			return new SandboxExecutionResult(ExecutionStatus.FAILED, "",
+					"Unable to start local execution sandbox: " + ex.getMessage(), null, elapsedMillis(started), 0);
 		} catch (InterruptedException ex) {
 			Thread.currentThread().interrupt();
 			return new SandboxExecutionResult(ExecutionStatus.CANCELLED, "", "Execution worker was interrupted.",
@@ -194,6 +254,14 @@ public class DockerSandboxRunner implements SandboxRunner {
 		return command;
 	}
 
+	private List<String> buildLocalCommand(SupportedLanguage language, String sourceFileName) {
+		String command = resolveRunCommand(language, sourceFileName);
+		if (System.getProperty("os.name", "").toLowerCase().contains("win")) {
+			return List.of("cmd", "/c", command);
+		}
+		return List.of("sh", "-lc", command);
+	}
+
 	static String resolveRunCommand(SupportedLanguage language, String sourceFileName) {
 		String fallbackSourceFileName = language.getSourceFileName();
 		String resolvedCommand = language.getRunCommand();
@@ -241,11 +309,11 @@ public class DockerSandboxRunner implements SandboxRunner {
 			return resolvedCommand;
 		}
 		return switch (languageKey) {
-			case "go" -> "GOMAXPROCS=1 GOFLAGS=-p=1 /usr/local/go/bin/go run " + sourceFileName;
-			case "kotlin" -> "/usr/lib/kotlinc/bin/kotlinc -J-Xms32m -J-Xmx320m "
+			case "go" -> "GOMAXPROCS=1 GOFLAGS=-p=1 go run " + sourceFileName;
+			case "kotlin" -> "kotlinc -J-Xms32m -J-Xmx320m "
 					+ sourceFileName
-					+ " -include-runtime -d main.jar && /usr/java/openjdk-12/bin/java -Xms32m -Xmx192m -jar main.jar";
-			case "rust" -> "/usr/local/cargo/bin/rustc " + sourceFileName + " -O -o main && ./main";
+					+ " -include-runtime -d main.jar && java -Xms32m -Xmx192m -jar main.jar";
+			case "rust" -> "rustc " + sourceFileName + " -O -o main && ./main";
 			default -> resolvedCommand;
 		};
 	}

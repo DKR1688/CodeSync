@@ -37,7 +37,6 @@ public class ExecutionServiceImpl implements ExecutionService {
 	private final SupportedLanguageRepository languageRepository;
 	private final ExecutionQueue executionQueue;
 	private final ExecutionProcessManager processManager;
-	private final boolean executionEnabled;
 	private final int defaultTimeLimitSeconds;
 	private final int defaultMemoryLimitMb;
 	private final double defaultCpuLimit;
@@ -50,7 +49,6 @@ public class ExecutionServiceImpl implements ExecutionService {
 			SupportedLanguageRepository languageRepository,
 			ExecutionQueue executionQueue,
 			ExecutionProcessManager processManager,
-			@Value("${codesync.execution.docker.enabled:true}") boolean executionEnabled,
 			@Value("${codesync.execution.default-time-limit-seconds:10}") int defaultTimeLimitSeconds,
 			@Value("${codesync.execution.default-memory-limit-mb:256}") int defaultMemoryLimitMb,
 			@Value("${codesync.execution.default-cpu-limit:1.0}") double defaultCpuLimit,
@@ -62,7 +60,6 @@ public class ExecutionServiceImpl implements ExecutionService {
 		this.languageRepository = languageRepository;
 		this.executionQueue = executionQueue;
 		this.processManager = processManager;
-		this.executionEnabled = executionEnabled;
 		this.defaultTimeLimitSeconds = defaultTimeLimitSeconds;
 		this.defaultMemoryLimitMb = defaultMemoryLimitMb;
 		this.defaultCpuLimit = defaultCpuLimit;
@@ -74,9 +71,6 @@ public class ExecutionServiceImpl implements ExecutionService {
 
 	@Override
 	public ExecutionJob submitExecution(SubmitExecutionRequest request, Long userId) {
-		if (!executionEnabled) {
-			throw new InvalidExecutionRequestException("Code execution is disabled in this deployment.");
-		}
 		if (request == null) {
 			throw new InvalidExecutionRequestException("Execution payload is required");
 		}

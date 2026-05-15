@@ -49,7 +49,7 @@ class ExecutionServiceImplTest {
 	@BeforeEach
 	void setUp() {
 		service = new ExecutionServiceImpl(executionRepository, languageRepository, executionQueue, processManager,
-				true, 10, 256, 1.0, 10, 256, 100, 50);
+				10, 256, 1.0, 10, 256, 100, 50);
 	}
 
 	@Test
@@ -113,23 +113,6 @@ class ExecutionServiceImplTest {
 		assertThatThrownBy(() -> service.submitExecution(request, 2L))
 				.isInstanceOf(InvalidExecutionRequestException.class)
 				.hasMessageContaining("disabled");
-		verify(executionRepository, never()).save(any());
-		verify(executionQueue, never()).enqueue(any());
-	}
-
-	@Test
-	void submitExecutionRejectsWhenExecutionIsDisabledForDeployment() {
-		service = new ExecutionServiceImpl(executionRepository, languageRepository, executionQueue, processManager,
-				false, 10, 256, 1.0, 10, 256, 100, 50);
-
-		SubmitExecutionRequest request = new SubmitExecutionRequest();
-		request.setProjectId(1L);
-		request.setLanguage("python");
-		request.setSourceCode("print('hi')");
-
-		assertThatThrownBy(() -> service.submitExecution(request, 2L))
-				.isInstanceOf(InvalidExecutionRequestException.class)
-				.hasMessageContaining("disabled in this deployment");
 		verify(executionRepository, never()).save(any());
 		verify(executionQueue, never()).enqueue(any());
 	}
