@@ -5,6 +5,8 @@ import com.codesync.project.dto.NotificationCommand;
 import com.codesync.project.dto.ProjectDTO;
 import com.codesync.project.dto.ProjectEvent;
 import com.codesync.project.dto.ProjectMemberEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -16,6 +18,8 @@ import java.util.UUID;
 
 @Component
 public class ProjectEventPublisher {
+
+	private static final Logger LOGGER = LoggerFactory.getLogger(ProjectEventPublisher.class);
 
 	private final RabbitTemplate rabbitTemplate;
 	private final NotificationServiceClient notificationServiceClient;
@@ -99,15 +103,23 @@ public class ProjectEventPublisher {
 		}
 
 		if (!TransactionSynchronizationManager.isSynchronizationActive()) {
-			rabbitTemplate.convertAndSend(exchangeName, routingKey, payload);
+			publishSafely(routingKey, payload);
 			return;
 		}
 
 		TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
 			@Override
 			public void afterCommit() {
-				rabbitTemplate.convertAndSend(exchangeName, routingKey, payload);
+				publishSafely(routingKey, payload);
 			}
 		});
+	}
+
+	private void publishSafely(String routingKey, Object payload) {
+		try {
+			rabbitTemplate.convertAndSend(exchangeName, routingKey, payload);
+		} catch (RuntimeException ex) {
+			LOGGER.warn("Unable to publish project event to routing key {}: {}", routingKey, ex.getMessage());
+		}
 	}
 }

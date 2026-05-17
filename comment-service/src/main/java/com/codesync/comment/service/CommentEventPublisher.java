@@ -3,6 +3,8 @@ package com.codesync.comment.service;
 import com.codesync.comment.dto.CommentEvent;
 import com.codesync.comment.dto.NotificationRequest;
 import com.codesync.comment.entity.Comment;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -14,6 +16,8 @@ import java.util.UUID;
 
 @Component
 public class CommentEventPublisher {
+
+	private static final Logger LOGGER = LoggerFactory.getLogger(CommentEventPublisher.class);
 
 	private final RabbitTemplate rabbitTemplate;
 	private final String exchangeName;
@@ -69,15 +73,23 @@ public class CommentEventPublisher {
 		}
 
 		if (!TransactionSynchronizationManager.isSynchronizationActive()) {
-			rabbitTemplate.convertAndSend(exchangeName, routingKey, payload);
+			publishSafely(routingKey, payload);
 			return;
 		}
 
 		TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
 			@Override
 			public void afterCommit() {
-				rabbitTemplate.convertAndSend(exchangeName, routingKey, payload);
+				publishSafely(routingKey, payload);
 			}
 		});
+	}
+
+	private void publishSafely(String routingKey, Object payload) {
+		try {
+			rabbitTemplate.convertAndSend(exchangeName, routingKey, payload);
+		} catch (RuntimeException ex) {
+			LOGGER.warn("Unable to publish comment event to routing key {}: {}", routingKey, ex.getMessage());
+		}
 	}
 }

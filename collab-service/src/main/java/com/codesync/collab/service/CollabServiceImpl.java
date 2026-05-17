@@ -39,6 +39,7 @@ import java.util.UUID;
 public class CollabServiceImpl implements CollabService {
 
 	private static final int DEFAULT_MAX_PARTICIPANTS = 10;
+	private static final int MAX_PARTICIPANTS_LIMIT = 100;
 	private static final List<String> PARTICIPANT_COLORS = List.of(
 			"#2563EB",
 			"#DC2626",
@@ -233,7 +234,7 @@ public class CollabServiceImpl implements CollabService {
 	public List<ParticipantDTO> getParticipants(String sessionId, String authorizationHeader) {
 		CollabSession session = getSessionOrThrow(sessionId);
 		assertCanReadProject(session.getProjectId(), authorizationHeader);
-		return participantRepository.findBySessionSessionIdOrderByJoinedAtAsc(sessionId).stream()
+		return participantRepository.findBySessionSessionIdAndLeftAtIsNullOrderByJoinedAtAsc(sessionId).stream()
 				.map(this::toParticipantDTO)
 				.toList();
 	}
@@ -389,7 +390,11 @@ public class CollabServiceImpl implements CollabService {
 	}
 
 	private int resolveMaxParticipants(Integer requestedValue) {
-		return requestedValue == null ? DEFAULT_MAX_PARTICIPANTS : requestedValue;
+		int resolved = requestedValue == null ? DEFAULT_MAX_PARTICIPANTS : requestedValue;
+		if (resolved < 1 || resolved > MAX_PARTICIPANTS_LIMIT) {
+			throw new InvalidCollabRequestException("Max participants must be between 1 and " + MAX_PARTICIPANTS_LIMIT);
+		}
+		return resolved;
 	}
 
 	private ParticipantRole resolveJoinRole(CollabSession session, Long actorUserId, ParticipantRole requestedRole,
@@ -425,7 +430,7 @@ public class CollabServiceImpl implements CollabService {
 	}
 
 	private String nextParticipantColor(String sessionId) {
-		long currentParticipants = participantRepository.findBySessionSessionIdOrderByJoinedAtAsc(sessionId).size();
+		long currentParticipants = participantRepository.countBySessionSessionIdAndLeftAtIsNull(sessionId);
 		return PARTICIPANT_COLORS.get((int) (currentParticipants % PARTICIPANT_COLORS.size()));
 	}
 

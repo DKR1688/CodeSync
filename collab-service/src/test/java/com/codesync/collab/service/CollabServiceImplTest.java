@@ -106,7 +106,6 @@ class CollabServiceImplTest {
 			return participant;
 		});
 		when(participantRepository.countBySessionSessionIdAndLeftAtIsNull(anyString())).thenReturn(1L);
-		when(participantRepository.findBySessionSessionIdOrderByJoinedAtAsc(anyString())).thenReturn(List.of());
 
 		CollabSessionDTO created = service.createSession(request, 99L, "Bearer token");
 
@@ -144,7 +143,6 @@ class CollabServiceImplTest {
 		when(participantRepository.findBySessionSessionIdAndUserIdAndLeftAtIsNull(session.getSessionId(), 55L))
 				.thenReturn(Optional.empty());
 		when(participantRepository.countBySessionSessionIdAndLeftAtIsNull(session.getSessionId())).thenReturn(1L);
-		when(participantRepository.findBySessionSessionIdOrderByJoinedAtAsc(session.getSessionId())).thenReturn(List.of());
 		when(participantRepository.save(any(Participant.class))).thenAnswer(invocation -> {
 			Participant participant = invocation.getArgument(0);
 			participant.setParticipantId(2L);

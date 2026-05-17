@@ -4,6 +4,8 @@ import com.codesync.file.client.VersionServiceClient;
 import com.codesync.file.dto.CreateSnapshotRequest;
 import com.codesync.file.dto.FileUpdatedEvent;
 import com.codesync.file.entity.CodeFile;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -15,6 +17,8 @@ import java.util.UUID;
 
 @Component
 public class FileEventPublisher {
+
+	private static final Logger LOGGER = LoggerFactory.getLogger(FileEventPublisher.class);
 
 	private final RabbitTemplate rabbitTemplate;
 	private final VersionServiceClient versionServiceClient;
@@ -62,12 +66,16 @@ public class FileEventPublisher {
 	}
 
 	private void dispatch(FileUpdatedEvent event, String authorizationHeader) {
-		if (rabbitEnabled) {
-			rabbitTemplate.convertAndSend(exchangeName, fileUpdatedRoutingKey, event);
-			return;
-		}
+		try {
+			if (rabbitEnabled) {
+				rabbitTemplate.convertAndSend(exchangeName, fileUpdatedRoutingKey, event);
+				return;
+			}
 
-		versionServiceClient.createSnapshot(toCreateSnapshotRequest(event), authorizationHeader);
+			versionServiceClient.createSnapshot(toCreateSnapshotRequest(event), authorizationHeader);
+		} catch (RuntimeException ex) {
+			LOGGER.warn("Unable to publish file update event for file {}: {}", event.getFileId(), ex.getMessage());
+		}
 	}
 
 	private CreateSnapshotRequest toCreateSnapshotRequest(FileUpdatedEvent event) {
