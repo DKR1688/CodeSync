@@ -1,6 +1,7 @@
 package com.codesync.auth.config;
 
 import com.codesync.auth.security.JwtAuthenticationFilter;
+import com.codesync.auth.security.OAuth2LoginFailureHandler;
 import com.codesync.auth.security.OAuth2LoginSuccessHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -25,20 +26,27 @@ public class SecurityConfig {
     @Autowired
     private OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
 
+    @Autowired
+    private OAuth2LoginFailureHandler oAuth2LoginFailureHandler;
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
         http.csrf(csrf -> csrf.disable())
-            .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            // OAuth2 login needs an HTTP session for the authorization
+            // request round-trip; JWT APIs remain stateless in practice.
+            .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
             .authorizeHttpRequests(
                 auth -> auth.requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
                            .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                            .requestMatchers(HttpMethod.POST, "/auth/register", "/auth/admin/bootstrap", "/auth/login", "/auth/refresh").permitAll()
                            .requestMatchers(HttpMethod.GET, "/auth/search", "/auth/profile/*").permitAll()
-                           .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
+                           .requestMatchers("/auth/oauth2/**", "/oauth2/**", "/login/oauth2/**").permitAll()
                            .anyRequest().authenticated())
             .exceptionHandling(ex -> ex.authenticationEntryPoint(new HttpStatusEntryPoint(UNAUTHORIZED)))
-            .oauth2Login(oauth -> oauth.successHandler(oAuth2LoginSuccessHandler))
+            .oauth2Login(oauth -> oauth
+                    .successHandler(oAuth2LoginSuccessHandler)
+                    .failureHandler(oAuth2LoginFailureHandler))
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

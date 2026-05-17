@@ -11,6 +11,7 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.Map;
 
@@ -21,7 +22,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
 	private final String frontendBaseUrl;
 
 	public OAuth2LoginSuccessHandler(AuthService authService,
-			@Value("${codesync.frontend-base-url:http://127.0.0.1:4200}") String frontendBaseUrl) {
+			@Value("${codesync.frontend-base-url:http://localhost:4200}") String frontendBaseUrl) {
 		this.authService = authService;
 		this.frontendBaseUrl = frontendBaseUrl;
 	}
@@ -43,8 +44,14 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
 		User user = authService.upsertOAuthUser(email, username, name, provider);
 		String token = authService.issueToken(user);
 
-		String redirectUrl = frontendBaseUrl + "/auth/callback?provider=" + provider.toLowerCase()
-				+ "&success=true&token=" + token;
+		String resolvedFrontendOrigin = OAuth2FrontendOriginSupport.resolveFrontendOrigin(request, frontendBaseUrl);
+		String redirectUrl = UriComponentsBuilder.fromUriString(resolvedFrontendOrigin)
+				.path("/auth/callback")
+				.queryParam("provider", provider.toLowerCase())
+				.queryParam("success", "true")
+				.queryParam("token", token)
+				.build(true)
+				.toUriString();
 		getRedirectStrategy().sendRedirect(request, response, redirectUrl);
 	}
 }

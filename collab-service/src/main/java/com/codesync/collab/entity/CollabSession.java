@@ -39,7 +39,7 @@ public class CollabSession {
 	private String language;
 
 	@Lob
-	@Column(nullable = false)
+	@Column(nullable = false, columnDefinition = "LONGTEXT")
 	private String currentContent = "";
 
 	@Column(nullable = false)
