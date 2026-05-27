@@ -1,9 +1,13 @@
 package com.codesync.file.service;
 
+import com.codesync.file.dto.FileChangeRequestDTO;
 import com.codesync.file.dto.FileTreeNode;
 import com.codesync.file.entity.CodeFile;
+import com.codesync.file.entity.FileChangeRequest;
+import com.codesync.file.entity.FileChangeRequest.Status;
 import com.codesync.file.exception.InvalidFileRequestException;
 import com.codesync.file.exception.ResourceNotFoundException;
+import com.codesync.file.repository.FileChangeRequestRepository;
 import com.codesync.file.repository.FileRepository;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
@@ -25,10 +29,13 @@ import java.util.Set;
 public class FileServiceImpl implements FileService {
 
 	private final FileRepository repository;
+	private final FileChangeRequestRepository changeRequestRepository;
 	private final FileEventPublisher eventPublisher;
 
-	public FileServiceImpl(FileRepository repository, FileEventPublisher eventPublisher) {
+	public FileServiceImpl(FileRepository repository, FileChangeRequestRepository changeRequestRepository,
+			FileEventPublisher eventPublisher) {
 		this.repository = repository;
+		this.changeRequestRepository = changeRequestRepository;
 		this.eventPublisher = eventPublisher;
 	}
 
@@ -100,6 +107,71 @@ public class FileServiceImpl implements FileService {
 			eventPublisher.publishFileUpdated(saved, authorizationHeader);
 		}
 		return saved;
+	}
+
+	@Override
+	public FileChangeRequestDTO submitChangeRequest(Long fileId, String content, Long editorId) {
+		validatePositiveId(editorId, "Editor user id");
+		CodeFile file = requireActiveFile(fileId);
+		if (file.isFolder()) {
+			throw new InvalidFileRequestException("Folder content cannot be updated");
+		}
+
+		FileChangeRequest changeRequest = new FileChangeRequest();
+		changeRequest.setProjectId(file.getProjectId());
+		changeRequest.setFileId(file.getFileId());
+		changeRequest.setFilePath(file.getPath());
+		changeRequest.setSubmittedBy(editorId);
+		changeRequest.setOriginalContent(file.getContent() == null ? "" : file.getContent());
+		changeRequest.setProposedContent(content == null ? "" : content);
+		changeRequest.setStatus(Status.PENDING);
+		return toChangeRequestDTO(changeRequestRepository.save(changeRequest));
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public List<FileChangeRequestDTO> getPendingChangeRequests(Long projectId) {
+		validatePositiveId(projectId, "Project id");
+		return changeRequestRepository.findByProjectIdAndStatusOrderByCreatedAtDesc(projectId, Status.PENDING).stream()
+				.map(this::toChangeRequestDTO)
+				.toList();
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public FileChangeRequestDTO getChangeRequest(Long changeRequestId) {
+		return toChangeRequestDTO(getChangeRequestOrThrow(changeRequestId));
+	}
+
+	@Override
+	public CodeFile approveChangeRequest(Long changeRequestId, Long reviewerId, String authorizationHeader) {
+		validatePositiveId(reviewerId, "Reviewer user id");
+		FileChangeRequest changeRequest = getChangeRequestOrThrow(changeRequestId);
+		if (changeRequest.getStatus() != Status.PENDING) {
+			throw new InvalidFileRequestException("Change request has already been reviewed");
+		}
+
+		CodeFile saved = updateFileContent(changeRequest.getFileId(), changeRequest.getProposedContent(), reviewerId,
+				authorizationHeader);
+		changeRequest.setReviewedBy(reviewerId);
+		changeRequest.setReviewedAt(java.time.LocalDateTime.now());
+		changeRequest.setStatus(Status.APPROVED);
+		changeRequestRepository.save(changeRequest);
+		return saved;
+	}
+
+	@Override
+	public FileChangeRequestDTO rejectChangeRequest(Long changeRequestId, Long reviewerId) {
+		validatePositiveId(reviewerId, "Reviewer user id");
+		FileChangeRequest changeRequest = getChangeRequestOrThrow(changeRequestId);
+		if (changeRequest.getStatus() != Status.PENDING) {
+			throw new InvalidFileRequestException("Change request has already been reviewed");
+		}
+
+		changeRequest.setReviewedBy(reviewerId);
+		changeRequest.setReviewedAt(java.time.LocalDateTime.now());
+		changeRequest.setStatus(Status.REJECTED);
+		return toChangeRequestDTO(changeRequestRepository.save(changeRequest));
 	}
 
 	@Override
@@ -317,6 +389,12 @@ public class FileServiceImpl implements FileService {
 				.orElseThrow(() -> new ResourceNotFoundException("File not found with id " + fileId));
 	}
 
+	private FileChangeRequest getChangeRequestOrThrow(Long changeRequestId) {
+		validatePositiveId(changeRequestId, "Change request id");
+		return changeRequestRepository.findByChangeRequestId(changeRequestId)
+				.orElseThrow(() -> new ResourceNotFoundException("Change request not found with id " + changeRequestId));
+	}
+
 	private void assertNoActiveConflict(Long projectId, String path, Long ignoredFileId) {
 		repository.findByProjectIdAndPathAndIsDeletedFalse(projectId, path)
 				.filter(existing -> ignoredFileId == null || !existing.getFileId().equals(ignoredFileId))
@@ -435,5 +513,22 @@ public class FileServiceImpl implements FileService {
 					.thenComparing(FileTreeNode::getName, String.CASE_INSENSITIVE_ORDER));
 			sortTree(node.getChildren());
 		}
+	}
+
+	private FileChangeRequestDTO toChangeRequestDTO(FileChangeRequest changeRequest) {
+		FileChangeRequestDTO dto = new FileChangeRequestDTO();
+		dto.setChangeRequestId(changeRequest.getChangeRequestId());
+		dto.setProjectId(changeRequest.getProjectId());
+		dto.setFileId(changeRequest.getFileId());
+		dto.setFilePath(changeRequest.getFilePath());
+		dto.setSubmittedBy(changeRequest.getSubmittedBy());
+		dto.setReviewedBy(changeRequest.getReviewedBy());
+		dto.setOriginalContent(changeRequest.getOriginalContent());
+		dto.setProposedContent(changeRequest.getProposedContent());
+		dto.setStatus(changeRequest.getStatus());
+		dto.setCreatedAt(changeRequest.getCreatedAt());
+		dto.setUpdatedAt(changeRequest.getUpdatedAt());
+		dto.setReviewedAt(changeRequest.getReviewedAt());
+		return dto;
 	}
 }

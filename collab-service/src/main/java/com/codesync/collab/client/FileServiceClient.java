@@ -121,7 +121,7 @@ public class FileServiceClient {
 			restClient.put()
 					.uri("/api/v1/files/{id}/content", fileId)
 					.headers(headers -> copyAuthorizationHeader(headers, authorizationHeader))
-					.body(Map.of("content", content))
+					.body(Map.of("content", content, "liveCollaboration", true))
 					.retrieve()
 					.toBodilessEntity();
 		} catch (RestClientResponseException ex) {

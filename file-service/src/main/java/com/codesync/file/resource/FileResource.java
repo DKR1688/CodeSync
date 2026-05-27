@@ -3,6 +3,7 @@ package com.codesync.file.resource;
 import com.codesync.file.client.ProjectPermissionClient;
 import com.codesync.file.dto.CreateFolderRequest;
 import com.codesync.file.dto.CopyProjectFilesRequest;
+import com.codesync.file.dto.FileChangeRequestDTO;
 import com.codesync.file.dto.FileContentUpdateRequest;
 import com.codesync.file.dto.FileMoveRequest;
 import com.codesync.file.dto.FileRenameRequest;
@@ -105,13 +106,43 @@ public class FileResource {
 
 	@PutMapping("/{id}/content")
 	@Operation(summary = "Update content", tags = { "06. Update File Content" })
-	public CodeFile updateContent(@PathVariable Long id, @RequestBody FileContentUpdateRequest request,
+	public ResponseEntity<?> updateContent(@PathVariable Long id, @RequestBody FileContentUpdateRequest request,
 			Authentication authentication,
 			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
 		CodeFile file = service.getFileById(id);
-		verifyWriteAccess(file.getProjectId(), authorizationHeader);
-		return service.updateFileContent(id, request != null ? request.getContent() : null,
-				requireCurrentUserId(authentication), authorizationHeader);
+		ProjectPermissionDTO permissions = verifyWriteAccess(file.getProjectId(), authorizationHeader);
+		Long userId = requireCurrentUserId(authentication);
+		String content = request != null ? request.getContent() : null;
+		if ((request != null && request.isLiveCollaboration()) || permissions.isOwner() || permissions.isAdmin()) {
+			return ResponseEntity.ok(service.updateFileContent(id, content, userId, authorizationHeader));
+		}
+		return ResponseEntity.status(HttpStatus.ACCEPTED).body(service.submitChangeRequest(id, content, userId));
+	}
+
+	@GetMapping("/project/{projectId}/changes/pending")
+	@Operation(summary = "Pending file change requests", tags = { "14. Pending File Changes" })
+	public List<FileChangeRequestDTO> getPendingChanges(@PathVariable Long projectId,
+			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
+		verifyManageAccess(projectId, authorizationHeader);
+		return service.getPendingChangeRequests(projectId);
+	}
+
+	@PostMapping("/changes/{changeRequestId}/approve")
+	@Operation(summary = "Approve file change request", tags = { "15. Approve File Change" })
+	public CodeFile approveChange(@PathVariable Long changeRequestId, Authentication authentication,
+			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
+		FileChangeRequestDTO changeRequest = getPendingChangeRequestForReview(changeRequestId);
+		verifyManageAccess(changeRequest.getProjectId(), authorizationHeader);
+		return service.approveChangeRequest(changeRequestId, requireCurrentUserId(authentication), authorizationHeader);
+	}
+
+	@PostMapping("/changes/{changeRequestId}/reject")
+	@Operation(summary = "Reject file change request", tags = { "16. Reject File Change" })
+	public FileChangeRequestDTO rejectChange(@PathVariable Long changeRequestId, Authentication authentication,
+			@RequestHeader(name = "Authorization", required = false) String authorizationHeader) {
+		FileChangeRequestDTO changeRequest = getPendingChangeRequestForReview(changeRequestId);
+		verifyManageAccess(changeRequest.getProjectId(), authorizationHeader);
+		return service.rejectChangeRequest(changeRequestId, requireCurrentUserId(authentication));
 	}
 
 	@PutMapping("/{id}/rename")
@@ -178,12 +209,25 @@ public class FileResource {
 		}
 	}
 
-	private void verifyWriteAccess(Long projectId, String authorizationHeader) {
+	private ProjectPermissionDTO verifyWriteAccess(Long projectId, String authorizationHeader) {
 		validateProjectId(projectId);
 		ProjectPermissionDTO permissions = projectPermissionClient.getPermissions(projectId, authorizationHeader);
 		if (!permissions.isCanWrite()) {
 			throw new AccessDeniedException("You do not have permission to modify this project's files");
 		}
+		return permissions;
+	}
+
+	private void verifyManageAccess(Long projectId, String authorizationHeader) {
+		validateProjectId(projectId);
+		ProjectPermissionDTO permissions = projectPermissionClient.getPermissions(projectId, authorizationHeader);
+		if (!permissions.isCanManage() && !permissions.isOwner() && !permissions.isAdmin()) {
+			throw new AccessDeniedException("You do not have permission to review this project's changes");
+		}
+	}
+
+	private FileChangeRequestDTO getPendingChangeRequestForReview(Long changeRequestId) {
+		return service.getChangeRequest(changeRequestId);
 	}
 
 	private void validateProjectId(Long projectId) {
